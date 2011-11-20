@@ -1,0 +1,10 @@
+# global
+*.swp
+*.bak
+
+# user client 
+.project
+.classpath
+project.properties
+.settings
+bin/*
