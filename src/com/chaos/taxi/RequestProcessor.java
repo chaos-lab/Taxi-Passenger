@@ -61,7 +61,7 @@ public class RequestProcessor {
 	static GeoPoint mUserGeoPoint = null;
 	static Object mCallTaxiLock = new Object();
 	static TaxiOverlayItemParam mMyTaxiParam = null;
-	static Integer mCallTaxiNumber = 1;
+	static long mCallTaxiRequestId = System.currentTimeMillis();
 
 	static DefaultHttpClient mHttpClient = new DefaultHttpClient();
 	static Thread mSendRequestThread = null;
@@ -79,8 +79,8 @@ public class RequestProcessor {
 			mData = null;
 		}
 
-		public int getIntData() {
-			return (Integer) mData;
+		public long getLongData() {
+			return (Long) mData;
 		}
 	}
 
@@ -252,8 +252,8 @@ public class RequestProcessor {
 		synchronized (mCallTaxiLock) {
 			mMyTaxiParam = null;
 			if (!removeRequest(CALL_TAXI_REQUEST))
-				request = generateCancelCallTaxiRequest(mCallTaxiNumber);
-			++mCallTaxiNumber;
+				request = generateCancelCallTaxiRequest(mCallTaxiRequestId);
+			++mCallTaxiRequestId;
 		}
 		if (request != null) {
 			final Request req = request;
@@ -301,8 +301,8 @@ public class RequestProcessor {
 				dialog.show();
 				return;
 			} else {
-				++mCallTaxiNumber;
-				addRequest(generateCallTaxiRequest(mCallTaxiNumber,
+				++mCallTaxiRequestId;
+				addRequest(generateCallTaxiRequest(mCallTaxiRequestId,
 						taxiPhoneNumber));
 			}
 		}
@@ -403,7 +403,7 @@ public class RequestProcessor {
 
 		if (request.mRequestType.equals(CALL_TAXI_REQUEST)) {
 			synchronized (mCallTaxiLock) {
-				if (request.getIntData() == mCallTaxiNumber) {
+				if (request.getLongData() == mCallTaxiRequestId) {
 					addRequest(request);
 				}
 			}
@@ -431,31 +431,31 @@ public class RequestProcessor {
 		return new Request(FIND_TAXI_REQUEST, jsonObj);
 	}
 
-	private static Request generateCancelCallTaxiRequest(int callTaxiNumber) {
+	private static Request generateCancelCallTaxiRequest(long callTaxiRequestId) {
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("type", CANCEL_CALL_TAXI_REQUEST);
 			jsonObj.put("from", "1234567890");
-			jsonObj.put("number", callTaxiNumber);
+			jsonObj.put("request_id", callTaxiRequestId);
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return null;
 		}
 		Request request = new Request(CANCEL_CALL_TAXI_REQUEST, jsonObj);
-		request.mData = (Integer) callTaxiNumber;
+		request.mData = (Long) callTaxiRequestId;
 		return request;
 	}
 
-	private static Request generateCallTaxiRequest(int callTaxiNumber,
+	private static Request generateCallTaxiRequest(long callTaxiRequestId,
 			String taxiPhoneNumber) {
-		Log.d(TAG, "generateCallTaxiRequest, callTaxiNumber: " + callTaxiNumber
-				+ " taxiPhoneNumber: " + taxiPhoneNumber);
+		Log.d(TAG, "generateCallTaxiRequest, callTaxiNumber: "
+				+ callTaxiRequestId + " taxiPhoneNumber: " + taxiPhoneNumber);
 		JSONObject jsonObj = new JSONObject();
 		GeoPoint userPoint = getUserGeoPoint();
 		try {
 			jsonObj.put("type", CALL_TAXI_REQUEST);
 			jsonObj.put("from", "1234567890");
-			jsonObj.put("number", mCallTaxiNumber);
+			jsonObj.put("number", callTaxiRequestId);
 			if (taxiPhoneNumber != null) {
 				jsonObj.put("to", taxiPhoneNumber);
 			}
@@ -468,7 +468,7 @@ public class RequestProcessor {
 			return null;
 		}
 		Request request = new Request(CALL_TAXI_REQUEST, jsonObj);
-		request.mData = (Integer) callTaxiNumber;
+		request.mData = (Long) callTaxiRequestId;
 		return request;
 	}
 
@@ -674,15 +674,15 @@ public class RequestProcessor {
 		}
 		Log.d(TAG, "taxiPhoneNumber is " + taxiPhoneNumber);
 
-		int callTaxiNumber = callTaxiReplyJson.optInt("number", -1);
+		int callTaxiRequestId = callTaxiReplyJson.optInt("request_id", -1);
 		synchronized (mCallTaxiLock) {
-			if (callTaxiNumber < mCallTaxiNumber) {
-				Log.w(TAG, "ignore call taxi response: " + callTaxiNumber
-						+ " currentNumber is " + mCallTaxiNumber);
+			if (callTaxiRequestId < mCallTaxiRequestId) {
+				Log.w(TAG, "ignore call taxi response: " + callTaxiRequestId
+						+ " currentNumber is " + mCallTaxiRequestId);
 			} else {
-				if (callTaxiNumber > mCallTaxiNumber) {
-					Log.wtf(TAG, "callTaxiNumber " + callTaxiNumber
-							+ " should not be larger than " + mCallTaxiNumber);
+				if (callTaxiRequestId > mCallTaxiRequestId) {
+					Log.wtf(TAG, "callTaxiNumber " + callTaxiRequestId
+							+ " should not be larger than " + callTaxiRequestId);
 				} else {
 					synchronized (mMapViewLock) {
 						mMyTaxiParam = mMapView
