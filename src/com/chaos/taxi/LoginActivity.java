@@ -16,7 +16,7 @@ public class LoginActivity extends Activity {
 
 	Button login_btn = null;
 	Button register_btn = null;
-	EditText nickname_et = null;
+	EditText phoneNumber_et = null;
 	EditText password_et = null;
 
 	@Override
@@ -26,30 +26,30 @@ public class LoginActivity extends Activity {
 
 		login_btn = (Button) findViewById(R.id.login_btn);
 		register_btn = (Button) findViewById(R.id.register_btn);
-		nickname_et = (EditText) findViewById(R.id.nick_name_et);
+		phoneNumber_et = (EditText) findViewById(R.id.login_phone_number_et);
 		password_et = (EditText) findViewById(R.id.password_et);
 
 		login_btn.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				Log.d(TAG, "login_btn onClick!");
 
-				String nickName = nickname_et.getText().toString();
+				String phoneNumber = phoneNumber_et.getText().toString();
 				String password = password_et.getText().toString();
-				Log.d(TAG, "nickName is " + nickName + " password is "
+				Log.d(TAG, "phoneNumber is " + phoneNumber + " password is "
 						+ password);
-				if (nickName == null || nickName.equals("")) {
+				if (phoneNumber == null || phoneNumber.equals("")) {
 					Toast.makeText(LoginActivity.this,
-							"Should input the NickName", 4000).show();
+							"Should input the PhoneNumber", 4000).show();
 				} else if (password == null || password.equals("")) {
 					Toast.makeText(LoginActivity.this,
 							"Should input the Password", 4000).show();
 				} else {
-					String msg = RequestProcessor.login(nickName, password);
+					String msg = RequestProcessor.login(phoneNumber, password);
 					if (msg.equals(RequestProcessor.LOGIN_SUCCESS)) {
 						LoginActivity.this.startActivity(new Intent(
 								LoginActivity.this, TaxiActivity.class));
 						LoginActivity.this.finish();
-					} else {				
+					} else {
 						Toast.makeText(LoginActivity.this,
 								"Login Fail: " + msg, 5000).show();
 					}
@@ -72,7 +72,9 @@ public class LoginActivity extends Activity {
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == REGISTER_REQUEST_CODE
 				&& resultCode == RegisterActivity.REGISTER_SUCCESS_CODE) {
-			this.finish();
+			LoginActivity.this.startActivity(new Intent(LoginActivity.this,
+					TaxiActivity.class));
+			LoginActivity.this.finish();
 		}
 	}
 }

@@ -17,5 +17,7 @@
     <string name="CallTaxiTimeoutStr">No Taxi response!</string>
     <string name="KeepWaitingStr">KeepWaiting</string>
     <string name="OkStr">OK</string>
+    <string name="PhoneNumberStr">PhoneNumber</string>
+    
 
 </resources>

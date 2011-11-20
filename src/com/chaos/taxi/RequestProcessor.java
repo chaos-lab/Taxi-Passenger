@@ -34,8 +34,8 @@ import android.widget.Toast;
 public class RequestProcessor {
 	private static final String TAG = "RequestProcessor";
 	static final String LOGIN_SUCCESS = "LOGIN_SUCCESS";
-	static final String REGISTER_SUCESS = "REGISTER_SUCESS";
-	static final String HTTPSERVER = "http://127.0.0.1:9000/passenger";
+	static final String REGISTER_SUCCESS = "REGISTER_SUCESS";
+	static final String HTTPSERVER = "http://taxi.no.de/passenger";
 
 	static final int CALLSERVER_INTERVAL = 5000;
 	static final float LOCATION_UPDATE_DISTANCE = (float) 5.0; // 5 meters
@@ -346,21 +346,21 @@ public class RequestProcessor {
 	public static void logout() {
 		mStopSendRequestThread = true;
 		try {
-			mSendRequestThread.join();
+			if (mSendRequestThread != null) {
+				mSendRequestThread.join();
+			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		// TODO: logout
-		mHttpClient.getConnectionManager().shutdown();
 	}
 
-	public static String login(String nickName, String password) {
-		TaxiActivity.sNickName = nickName;
+	public static String login(String phoneNumber, String password) {
+		TaxiActivity.sPhoneNumber = phoneNumber;
 
 		HttpPost httpPost = new HttpPost(HTTPSERVER + "/signin");
 		JSONObject signinJson = new JSONObject();
 		try {
-			signinJson.put("nick_name", nickName);
+			signinJson.put("phone_name", phoneNumber);
 			signinJson.put("password", password);
 			httpPost.setEntity(new StringEntity(signinJson.toString()));
 		} catch (JSONException e) {
@@ -369,16 +369,24 @@ public class RequestProcessor {
 			e.printStackTrace();
 		}
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost);
-		String message = LOGIN_SUCCESS;
+		String message = null;
 		if (executeRet.first != 0) {
 			Log.e(TAG, "login fail, status code is " + executeRet.first);
-			try {
-				message = executeRet.second.getString("message");
-			} catch (JSONException e) {
-				e.printStackTrace();
-				message = "LOGIN IS FAILED!";
+			if (executeRet.second != null) {
+				try {
+					message = executeRet.second.getString("message");
+				} catch (JSONException e) {
+					e.printStackTrace();
+					message = "LOGIN IS FAILED! JSONException. "
+							+ executeRet.first;
+				}
+			}
+			if (message == null || message.equals("")) {
+				message = "LOGIN FAILED! " + executeRet.first;
 			}
 		} else {
+			message = LOGIN_SUCCESS;
+			Log.d(TAG, "start mSendRequestThread!");
 			mSendRequestThread = new Thread(mTask);
 			mStopSendRequestThread = false;
 			mSendRequestThread.start();
@@ -387,10 +395,41 @@ public class RequestProcessor {
 		return message;
 	}
 
-	public static String register(String nickName, String userName,
+	public static String register(String nickName, String phoneNumber,
 			String password) {
-		// TODO: register
-		return null;
+		TaxiActivity.sNickName = nickName;
+		TaxiActivity.sPhoneNumber = phoneNumber;
+
+		HttpPost httpPost = new HttpPost(HTTPSERVER + "/signup");
+		JSONObject signinJson = new JSONObject();
+		try {
+			signinJson.put("nickname", nickName);
+			signinJson.put("phone_name", phoneNumber);
+			signinJson.put("password", password);
+			httpPost.setEntity(new StringEntity(signinJson.toString()));
+		} catch (JSONException e) {
+			e.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost);
+		String message = null;
+		if (executeRet.first != 0) {
+			Log.e(TAG, "register fail, status code is " + executeRet.first);
+			if (executeRet.second != null) {
+				try {
+					message = executeRet.second.getString("message");
+				} catch (JSONException e) {
+					e.printStackTrace();
+					message = "REGISTER IS FAILED! JSONException. "
+							+ executeRet.first;
+				}
+			}
+			if (message == null || message.equals("")) {
+				message = "REGISTER FAILED! " + executeRet.first;
+			}
+		}
+		return message;
 	}
 
 	private static void resendRequest(Request request) {
