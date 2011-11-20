@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <com.chaos.taxi.map.TaxiMapView
+        android:id="@+id/google_map"
+        android:layout_width="fill_parent"
+        android:layout_height="336dp"
+        android:layout_above="@+id/auto_locate_btn"
+        android:layout_alignParentTop="true"
+        android:layout_weight="0.66"
+        android:apiKey="0OLgVvgJkiRH6pTg41XFurVpl5XCvnfZP2igUbQ"
+        android:clickable="true"
+        android:enabled="true" />
+
+    <Button
+        android:id="@+id/auto_locate_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:text="@string/AutoLocateStr" />
+
+    <Button
+        android:id="@+id/call_taxi_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@+id/auto_locate_btn"
+        android:text="@string/CallTaxiStr" />
+
+    <Button
+        android:id="@+id/locate_taxi_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@+id/call_taxi_btn"
+        android:text="@string/LocateTaxiStr" />
+
+    <Button
+        android:id="@+id/find_taxi_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:text="@string/FindTaxiStr" />
+
+</RelativeLayout>

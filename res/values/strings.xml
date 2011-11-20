@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">Hello World, TaxiActivity!</string>
+    <string name="app_name">Taxi</string>
+    <string name="AutoLocateStr">AutoLocate</string>
+    <string name="CallTaxiStr">CallTaxi</string>
+    <string name="LocateTaxiStr">LocateTaxi</string>
+    <string name="FindTaxiStr">FindTaxi</string>
+    <string name="PasswordStr">Password</string>
+    <string name="UserNameStr">UserName</string>
+    <string name="LoginStr">Login</string>
+    <string name="RegisterStr">Register</string>
+    <string name="NickNameStr">NickName</string>
+    <string name="CancelCallTaxiStr">CancelCallTaxi</string>
+    <string name="WaitTaxiStr">Waiting for Taxi.....</string>
+    <string name="CallTaxiTimeoutStr">No Taxi response!</string>
+    <string name="KeepWaitingStr">KeepWaiting</string>
+    <string name="OkStr">OK</string>
+
+</resources>
