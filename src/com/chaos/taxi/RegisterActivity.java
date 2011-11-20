@@ -29,7 +29,7 @@ public class RegisterActivity extends Activity {
 		mRegisterButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				String nickName = mNickNameET.getText().toString();
-				String phoneNumber = mPhoneNumberET.getText().toString();
+				String phoneNumber= mPhoneNumberET.getText().toString();
 				String password = mPasswordET.getText().toString();
 
 				if (nickName == null || nickName.equals("")) {

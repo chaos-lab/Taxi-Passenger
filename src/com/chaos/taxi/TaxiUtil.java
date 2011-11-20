@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -70,14 +72,14 @@ public class TaxiUtil {
 		return new GeoPoint((int) (location.getLatitude() * 1e6),
 				(int) (location.getLongitude() * 1e6));
 	}
-	
+
 	public static Location geoPointToLocation(GeoPoint point) {
 		if (point == null) {
 			return null;
 		}
 		Location loc = new Location("FromGeoPoint");
-		loc.setLatitude((float)(point.getLatitudeE6()) / (float)1e6);
-		loc.setLongitude((float)(point.getLongitudeE6()) / (float)1e6);
+		loc.setLatitude((float) (point.getLatitudeE6()) / (float) 1e6);
+		loc.setLongitude((float) (point.getLongitudeE6()) / (float) 1e6);
 		return loc;
 	}
 
@@ -137,17 +139,25 @@ public class TaxiUtil {
 
 	private static String getServerAddressByRequestType(String requestType) {
 		if (requestType.equals(RequestProcessor.FIND_TAXI_REQUEST)) {
-			return RequestProcessor.HTTPSERVER + "/passenger/taxi/near";
+			return RequestProcessor.HTTPSERVER + "/taxi/near";
 		} else if (requestType.equals(RequestProcessor.CALL_TAXI_REQUEST)) {
-			return RequestProcessor.HTTPSERVER + "/passenger/message";
+			return RequestProcessor.HTTPSERVER + "/message";
 		} else if (requestType.equals(RequestProcessor.LOCATION_UPDATE_REQUEST)) {
-			return RequestProcessor.HTTPSERVER + "/passenger/location/update";
+			return RequestProcessor.HTTPSERVER + "/location/update";
 		} else if (requestType.equals(RequestProcessor.REFRESH_REQUEST)) {
-			return RequestProcessor.HTTPSERVER + "/passenger/refresh";
+			return RequestProcessor.HTTPSERVER + "/refresh";
 		}
 		return null;
 	}
-	
+
+	public static boolean isGetRequest(String requestType) {
+		if (requestType.equals(RequestProcessor.REFRESH_REQUEST)
+				|| requestType.equals(RequestProcessor.FIND_TAXI_REQUEST)) {
+			return true;
+		}
+		return false;
+	}
+
 	public static HttpUriRequest generateHttpUriRequest(Request request) {
 		if (request == null) {
 			return null;
@@ -160,21 +170,46 @@ public class TaxiUtil {
 		}
 
 		HttpUriRequest httpUriRequest = null;
-		if (request.mRequestJson != null) {
+		if (!isGetRequest(request.mRequestType)) {
+			Log.d(TAG, "generate HttpPost for " + request.mRequestType);
 			httpUriRequest = new HttpPost(serverAddress);
-			try {
-				((HttpPost) httpUriRequest).setEntity(new StringEntity(
-						request.mRequestJson.toString()));
-			} catch (UnsupportedEncodingException e1) {
-				Log.e(TAG, "cannot encode the string to StringEntity. "
-						+ request);
-				e1.printStackTrace();
-				return null;
+			if (request.mRequestJson != null) {
+				Log.d(TAG,
+						"request json str is "
+								+ request.mRequestJson.toString());
+				if (!TaxiUtil.setHttpEntity((HttpPost) httpUriRequest,
+						request.mRequestJson.toString())) {
+					return null;
+				}
 			}
 		} else {
-			// it is the refresh request
+			Log.d(TAG, "generate HttpGet for " + request.mRequestType);
+			if (request.mRequestJson != null) {
+				Log.d(TAG,
+						"request json str is "
+								+ request.mRequestJson.toString());
+				serverAddress += "?json_data="
+						+ URLEncoder.encode(request.mRequestJson.toString());
+				Log.d(TAG, "serverAddress now is " + serverAddress);
+			} /*
+			 * else { serverAddress += "?json_data={}"; }
+			 */
 			httpUriRequest = new HttpGet(serverAddress);
 		}
 		return httpUriRequest;
+	}
+
+	public static boolean setHttpEntity(HttpEntityEnclosingRequestBase request,
+			String entityStr) {
+		entityStr = "json_data=" + entityStr;
+		Log.d(TAG, "setHttpEntity: " + entityStr);
+		try {
+			request.setEntity(new StringEntity(entityStr));
+			return true;
+		} catch (UnsupportedEncodingException e) {
+			Log.e(TAG, "cannot encode the string to StringEntity. " + request);
+			e.printStackTrace();
+			return false;
+		}
 	}
 }

@@ -3,7 +3,6 @@ package com.chaos.taxi;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -11,8 +10,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -35,7 +34,7 @@ public class RequestProcessor {
 	private static final String TAG = "RequestProcessor";
 	static final String LOGIN_SUCCESS = "LOGIN_SUCCESS";
 	static final String REGISTER_SUCCESS = "REGISTER_SUCESS";
-	static final String HTTPSERVER = "http://taxi.no.de/passenger";
+	static final String HTTPSERVER = "http://192.168.1.103/passenger";
 
 	static final int CALLSERVER_INTERVAL = 5000;
 	static final float LOCATION_UPDATE_DISTANCE = (float) 5.0; // 5 meters
@@ -217,17 +216,32 @@ public class RequestProcessor {
 		}
 
 		// handle the find taxi result
-		if (httpRet.first == 0) {
+		if (httpRet.first == 200) {
 			JSONObject jsonRet = httpRet.second;
-			JSONObject taxis;
+			if (jsonRet == null) {
+				Log.e(TAG,
+						"sendFindTaxiRequest: SUCCEED! server response is error!");
+				return;
+			}
+
+			int status = -1;
 			try {
-				taxis = jsonRet.getJSONObject("taxis");
+				status = jsonRet.getInt("status");
+			} catch (JSONException e1) {
+				e1.printStackTrace();
+			}
+			if (status != 0) {
+				// TODO: add support for other status codes
+				Log.e(TAG,
+						"sendFindTaxiRequest: server return status is not 0! "
+								+ status);
+				return;
+			}
+			try {
+				JSONArray taxis = jsonRet.getJSONArray("taxis");
 				if (taxis != null) {
-					@SuppressWarnings("unchecked")
-					Iterator<String> iter = taxis.keys();
-					while (iter.hasNext()) {
-						String key = iter.next();
-						JSONObject taxiInfo = taxis.getJSONObject(key);
+					for (int i = 0; i < taxis.length(); ++i) {
+						JSONObject taxiInfo = taxis.getJSONObject(i);
 						GeoPoint point = new GeoPoint(
 								taxiInfo.getInt("latitude"),
 								taxiInfo.getInt("longitude"));
@@ -262,19 +276,38 @@ public class RequestProcessor {
 					while (true) {
 						Pair<Integer, JSONObject> ret = sendRequestToServer(req);
 						if (ret != null) {
-							if (ret.first == 0) {
-								Log.d(TAG, "cancel taxi request succeed!");
-								return;
-							} else {
+							if (ret.first == 200) {
+								if (ret.second == null) {
+									Log.e(TAG,
+											"cancelCallTaxiRequest: SUCCEED! server response is error! ");
+									return;
+								}
+								int status = -1;
+								try {
+									status = ret.second.getInt("status");
+								} catch (JSONException e1) {
+									e1.printStackTrace();
+								}
+								if (status == 0) {
+									Log.d(TAG, "cancel taxi request succeed!");
+									return;
+								} else {
+									// TODO: add support for other status codes
+									Log.e(TAG,
+											"cancelCallTaxiRequest: server return status is not 0! "
+													+ status);
+									return;
+								}
 
-								// TODO: here for some status do not need to
-								// continue
+							} else {
 								String message = null;
 								try {
-									message = ret.second.getString("message");
+									message = ret.second.getString("message")
+											+ " status " + ret.first;
 								} catch (JSONException e) {
 									e.printStackTrace();
-									message = "CancelCallTaxi IS FAILED!";
+									message = "CancelCallTaxi IS FAILED! status "
+											+ ret.first;
 								}
 								Log.d(TAG, ret.first + " " + message);
 							}
@@ -360,31 +393,45 @@ public class RequestProcessor {
 		HttpPost httpPost = new HttpPost(HTTPSERVER + "/signin");
 		JSONObject signinJson = new JSONObject();
 		try {
-			signinJson.put("phone_name", phoneNumber);
+			signinJson.put("phone_number", phoneNumber);
 			signinJson.put("password", password);
-			httpPost.setEntity(new StringEntity(signinJson.toString()));
 		} catch (JSONException e) {
 			e.printStackTrace();
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
 		}
-		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost);
+		Log.d(TAG, "signin json str is " + signinJson.toString());
+		TaxiUtil.setHttpEntity(httpPost, signinJson.toString());
+
+		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
+				"Login");
 		String message = null;
-		if (executeRet.first != 0) {
+		if (executeRet.first != 200) {
 			Log.e(TAG, "login fail, status code is " + executeRet.first);
-			if (executeRet.second != null) {
-				try {
-					message = executeRet.second.getString("message");
-				} catch (JSONException e) {
-					e.printStackTrace();
-					message = "LOGIN IS FAILED! JSONException. "
-							+ executeRet.first;
-				}
-			}
 			if (message == null || message.equals("")) {
 				message = "LOGIN FAILED! " + executeRet.first;
 			}
 		} else {
+			if (executeRet.second == null) {
+				return "LOGIN IS FAILED! response format also error!";
+			}
+			int status = -1;
+			try {
+				status = executeRet.second.getInt("status");
+			} catch (JSONException e1) {
+				e1.printStackTrace();
+			}
+			if (status != 0) {
+				// TODO: add detail support for other status codes
+				Log.e(TAG, "login: server return status is not 0! " + status);
+				try {
+					message = executeRet.second.getString("message") + " "
+							+ status;
+				} catch (JSONException e) {
+					e.printStackTrace();
+					message = "LOGIN IS FAILED! response format also error! "
+							+ status;
+				}
+				return message;
+			}
 			message = LOGIN_SUCCESS;
 			Log.d(TAG, "start mSendRequestThread!");
 			mSendRequestThread = new Thread(mTask);
@@ -401,32 +448,43 @@ public class RequestProcessor {
 		TaxiActivity.sPhoneNumber = phoneNumber;
 
 		HttpPost httpPost = new HttpPost(HTTPSERVER + "/signup");
-		JSONObject signinJson = new JSONObject();
+		JSONObject registerJson = new JSONObject();
 		try {
-			signinJson.put("nickname", nickName);
-			signinJson.put("phone_name", phoneNumber);
-			signinJson.put("password", password);
-			httpPost.setEntity(new StringEntity(signinJson.toString()));
+			registerJson.put("nickname", nickName);
+			registerJson.put("phone_number", phoneNumber);
+			registerJson.put("password", password);
 		} catch (JSONException e) {
 			e.printStackTrace();
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
 		}
-		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost);
+		Log.d(TAG, "register json str is " + registerJson.toString());
+		TaxiUtil.setHttpEntity(httpPost, registerJson.toString());
+
+		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
+				"Register");
 		String message = null;
-		if (executeRet.first != 0) {
+		if (executeRet.first != 200) {
 			Log.e(TAG, "register fail, status code is " + executeRet.first);
-			if (executeRet.second != null) {
-				try {
-					message = executeRet.second.getString("message");
-				} catch (JSONException e) {
-					e.printStackTrace();
-					message = "REGISTER IS FAILED! JSONException. "
-							+ executeRet.first;
-				}
-			}
 			if (message == null || message.equals("")) {
 				message = "REGISTER FAILED! " + executeRet.first;
+			}
+		} else {
+			if (executeRet.second == null) {
+				return "REGISTER IS FAILED! response format is also error!";
+			}
+			int status = -1;
+			try {
+				status = executeRet.second.getInt("status");
+			} catch (JSONException e1) {
+				e1.printStackTrace();
+			}
+			if (status == 0) {
+				return REGISTER_SUCCESS;
+			}
+			try {
+				message = executeRet.second.getString("message") + " " + status;
+			} catch (JSONException e) {
+				e.printStackTrace();
+				message = "REGISTER IS FAILED! JSONException. " + status;
 			}
 		}
 		return message;
@@ -474,7 +532,7 @@ public class RequestProcessor {
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("type", CANCEL_CALL_TAXI_REQUEST);
-			jsonObj.put("from", "1234567890");
+			jsonObj.put("from", TaxiActivity.sPhoneNumber);
 			jsonObj.put("request_id", callTaxiRequestId);
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -493,7 +551,7 @@ public class RequestProcessor {
 		GeoPoint userPoint = getUserGeoPoint();
 		try {
 			jsonObj.put("type", CALL_TAXI_REQUEST);
-			jsonObj.put("from", "1234567890");
+			jsonObj.put("from", TaxiActivity.sPhoneNumber);
 			jsonObj.put("number", callTaxiRequestId);
 			if (taxiPhoneNumber != null) {
 				jsonObj.put("to", taxiPhoneNumber);
@@ -528,17 +586,19 @@ public class RequestProcessor {
 	}
 
 	private static Pair<Integer, JSONObject> executeHttpRequest(
-			HttpUriRequest httpUriRequest) {
+			HttpUriRequest httpUriRequest, String requestType) {
 		Integer statusCode = 0;
 		String exceptionMsg = null;
 
 		try {
 			HttpResponse httpResponse = null;
+			httpUriRequest.setHeader("Content-Type",
+					"application/x-www-form-urlencoded");
 			synchronized (mHttpClient) {
 				httpResponse = mHttpClient.execute(httpUriRequest);
 			}
 			statusCode = httpResponse.getStatusLine().getStatusCode();
-			if (statusCode == 0) {
+			if (statusCode == 200) {
 				BufferedReader bufferedReader = new BufferedReader(
 						new InputStreamReader(httpResponse.getEntity()
 								.getContent()));
@@ -549,7 +609,7 @@ public class RequestProcessor {
 				}
 
 				String str = stringBuffer.toString();
-				Log.d(TAG, "response is " + str);
+				Log.d(TAG, requestType + " response is " + str);
 				if (str == null) {
 					return new Pair<Integer, JSONObject>(statusCode, null);
 				} else {
@@ -557,7 +617,7 @@ public class RequestProcessor {
 							new JSONObject(str));
 				}
 			} else {
-				Log.w(TAG, "HttpFail. HttpPost StatusCode is " + statusCode);
+				Log.w(TAG, "HttpFail. StatusCode is " + statusCode);
 				return new Pair<Integer, JSONObject>(statusCode, null);
 			}
 		} catch (ClientProtocolException e) {
@@ -573,7 +633,6 @@ public class RequestProcessor {
 
 		JSONObject jsonRet = new JSONObject();
 		try {
-			// TODO: the detail message may need to be removed in final revision
 			jsonRet.put("message", "Cannot conenct to server!" + exceptionMsg);
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -590,7 +649,7 @@ public class RequestProcessor {
 			return null;
 		}
 
-		return executeHttpRequest(httpUriRequest);
+		return executeHttpRequest(httpUriRequest, request.mRequestType);
 	}
 
 	static Runnable mTask = new Runnable() {
@@ -620,9 +679,28 @@ public class RequestProcessor {
 				if (httpRet == null) {
 					continue;
 				}
-				if (httpRet.first != 0) {
-					// TODO: some status may do not need resend
+				if (httpRet.first != 200) {
+					Log.d(TAG, "sendRequest: " + request.mRequestType
+							+ ". status is " + httpRet.first);
 					resendRequest(request);
+				} else if (httpRet.first == 200) {
+					if (httpRet.second == null) {
+						Log.e(TAG, "sendRequest: " + request.mRequestType
+								+ " fail! response format also error!");
+						continue;
+					}
+					int status = -1;
+					try {
+						status = httpRet.second.getInt("status");
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					if (status != 0) {
+						// TODO: add support for other status codes
+						Log.e(TAG, "sendRequest: " + request.mRequestType
+								+ " fail! status is " + status);
+						resendRequest(request);
+					}
 				}
 			}
 		}
@@ -636,7 +714,7 @@ public class RequestProcessor {
 			return;
 		}
 		Log.d(TAG, "refresh request status is " + httpRet.first);
-		if (httpRet.first != 0) {
+		if (httpRet.first != 200) {
 			return;
 		}
 		// handle the result
@@ -647,6 +725,18 @@ public class RequestProcessor {
 		if (jsonRet == null) {
 			return;
 		}
+		int status = -1;
+		try {
+			status = jsonRet.getInt("status");
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		if (status != 0) {
+			// TODO: add support for other status codes
+			Log.e(TAG, "handleRefreshResponseJson: status is " + status);
+			return;
+		}
+
 		JSONObject messageListJson = jsonRet.optJSONObject("message");
 		if (messageListJson == null) {
 			Log.d(TAG, "no message in refresh response!");
