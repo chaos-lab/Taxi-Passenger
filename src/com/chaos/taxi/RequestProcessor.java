@@ -34,7 +34,7 @@ public class RequestProcessor {
 	private static final String TAG = "RequestProcessor";
 	static final String LOGIN_SUCCESS = "LOGIN_SUCCESS";
 	static final String REGISTER_SUCCESS = "REGISTER_SUCESS";
-	static final String HTTPSERVER = "http://192.168.1.103/passenger";
+	static final String HTTPSERVER = "http://taxi.no.de/passenger";
 
 	static final int CALLSERVER_INTERVAL = 5000;
 	static final float LOCATION_UPDATE_DISTANCE = (float) 5.0; // 5 meters
@@ -556,10 +556,15 @@ public class RequestProcessor {
 			if (taxiPhoneNumber != null) {
 				jsonObj.put("to", taxiPhoneNumber);
 			}
+			JSONObject data = new JSONObject();
+			JSONObject temp = new JSONObject();
 			if (userPoint != null) {
-				jsonObj.put("latitude", userPoint.getLatitudeE6());
-				jsonObj.put("Longitude", userPoint.getLongitudeE6());
+				temp.put("latitude", userPoint.getLatitudeE6());
+				temp.put("Longitude", userPoint.getLongitudeE6());
+				temp.put("phone_number", "123");
+				temp.put("nickname", "souriki");
 			}
+			data.put("passenger", temp);
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return null;
@@ -801,7 +806,7 @@ public class RequestProcessor {
 			Log.wtf(TAG, "taxiPhoneNumber is null in call taxi reply!!!");
 			return;
 		}
-		Log.d(TAG, "taxiPhoneNumber is " + taxiPhoneNumber);
+		Log.i(TAG, "taxiPhoneNumber is " + taxiPhoneNumber);
 
 		int callTaxiRequestId = callTaxiReplyJson.optInt("request_id", -1);
 		synchronized (mCallTaxiLock) {
@@ -816,11 +821,10 @@ public class RequestProcessor {
 					synchronized (mMapViewLock) {
 						mMyTaxiParam = mMapView
 								.findInAroundTaxi(taxiPhoneNumber);
+						if (mMyTaxiParam != null) {
+							Log.e(TAG, "mMyTaxiParam should not be null!");
+						}
 					}
-				}
-
-				if (mMyTaxiParam != null) {
-					showCallTaxiSucceedDialog();
 				}
 			}
 		}
