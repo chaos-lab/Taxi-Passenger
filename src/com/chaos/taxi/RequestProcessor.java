@@ -564,6 +564,7 @@ public class RequestProcessor {
 				temp.put("nickname", "souriki");
 			}
 			data.put("passenger", temp);
+			jsonObj.put("data", data);
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return null;
