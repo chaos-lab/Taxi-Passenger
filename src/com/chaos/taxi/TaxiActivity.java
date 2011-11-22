@@ -4,7 +4,9 @@ import com.chaos.taxi.map.TaxiMapView;
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Location;
 import android.location.LocationListener;
@@ -84,16 +86,35 @@ public class TaxiActivity extends MapActivity {
 		mLocateTaxiBtn = (Button) findViewById(R.id.locate_taxi_btn);
 		mFindTaxiBtn = (Button) findViewById(R.id.find_taxi_btn);
 
-		//TODO: currently only support call specified taxi
+		// TODO: currently only support call specified taxi
 		mCallTaxiBtn.setVisibility(View.INVISIBLE);
 		mCallTaxiBtn.setOnClickListener(new OnClickListener() {
 			public void onClick(View arg0) {
-				RequestProcessor.sendCallTaxiRequest();
-				Intent intent = new Intent(TaxiActivity.this,
-						WaitTaxiActivity.class);
-				intent.putExtra("WaitTaxiTime",
-						RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
-				startActivityForResult(intent, CALL_TAXI_REQUEST_CODE);
+				long requestId = RequestProcessor.sendCallTaxiRequest();
+				if (requestId != -1) {
+					Intent intent = new Intent(TaxiActivity.this,
+							WaitTaxiActivity.class);
+					intent.putExtra("WaitTaxiTime",
+							RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
+					intent.putExtra("RequestId", requestId);
+					startActivityForResult(intent, CALL_TAXI_REQUEST_CODE);
+				} else {
+					AlertDialog dialog = new AlertDialog.Builder(
+							TaxiActivity.this)
+							.setIcon(android.R.drawable.ic_dialog_info)
+							.setTitle("CallTaxiFail: ")
+							.setMessage("Already have a taxi")
+							.setPositiveButton("Locate",
+									new DialogInterface.OnClickListener() {
+										public void onClick(
+												DialogInterface dialog,
+												int which) {
+											RequestProcessor
+													.sendLocateTaxiRequest();
+										}
+									}).setNegativeButton("OK", null).create();
+					dialog.show();
+				}
 			}
 		});
 
@@ -132,6 +153,13 @@ public class TaxiActivity extends MapActivity {
 				RequestProcessor.cancelCallTaxiRequest();
 			} else if (resultCode == WaitTaxiActivity.SUCCEED_WAIT) {
 				RequestProcessor.showCallTaxiSucceedDialog();
+			} else if (resultCode == WaitTaxiActivity.REJECT_WAIT) {
+				AlertDialog dialog = new AlertDialog.Builder(TaxiActivity.this)
+						.setIcon(android.R.drawable.ic_dialog_info)
+						.setTitle("CallTaxiFail: ")
+						.setMessage("Driver Reject!")
+						.setNegativeButton("OK", null).create();
+				dialog.show();
 			}
 		}
 	}

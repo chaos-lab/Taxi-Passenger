@@ -16,12 +16,14 @@ public class WaitTaxiActivity extends Activity {
 	private static final String TAG = "WaitTaxiActivity";
 	static final int SUCCEED_WAIT = 0;
 	static final int CANCEL_WAIT = 1;
+	static final int REJECT_WAIT = 2;
 
 	static final int SET_RESEND_VIEW = 100;
 	static final int SET_WAITTIME_TEXT = 200;
 
 	Button waitTaxiBtn = null;
 	TextView waitTaxiTimeTv = null;
+	long mRequestId = -1;
 
 	Button keepWaitBtn = null;
 	Button cancelWaitBtn = null;
@@ -54,9 +56,6 @@ public class WaitTaxiActivity extends Activity {
 		waitTaxiBtn = (Button) findViewById(R.id.wait_taxi_btn);
 		waitTaxiTimeTv = (TextView) findViewById(R.id.wait_taxi_time_tv);
 
-		Intent intent = getIntent();
-		mWaitTaxiTime = intent.getIntExtra("WaitTaxiTIme",
-				RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
 		setLeftWaitTaxiTime(mWaitTaxiTime);
 		Log.d(TAG, "mWaitTaxiTime is " + mWaitTaxiTime);
 
@@ -116,6 +115,11 @@ public class WaitTaxiActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		Log.d(TAG, "onCreate");
 
+		Intent intent = getIntent();
+		mWaitTaxiTime = intent.getIntExtra("WaitTaxiTIme",
+				RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
+		mRequestId = getIntent().getLongExtra("RequestId", -1);
+		
 		setWaitTaxiView();
 	}
 
@@ -137,10 +141,14 @@ public class WaitTaxiActivity extends Activity {
 					e.printStackTrace();
 				}
 
-				if (RequestProcessor.isCallTaxiSucceed()) {
+				int status = RequestProcessor.getCallTaxiStatus(mRequestId);
+				if (status == RequestProcessor.CALL_TAXI_STATUS_SUCCEED) {
 					WaitTaxiActivity.this.setResult(SUCCEED_WAIT);
 					WaitTaxiActivity.this.finish();
-				}
+				} else if (status == RequestProcessor.CALL_TAXI_STATUS_REJECTTED) {
+					setResult(REJECT_WAIT);
+					WaitTaxiActivity.this.finish();
+				} 
 
 				decreaseSetLeftWaitTaxiTime();
 				if (0 == getLeftWaitTaxiTime()) {

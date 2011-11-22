@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.http.HttpResponse;
@@ -48,6 +49,10 @@ public class RequestProcessor {
 	static final String LOCATION_UPDATE_REQUEST = "location-update";
 	static final String REFRESH_REQUEST = "RefreshRequest";
 
+	static final Integer CALL_TAXI_STATUS_CALLING = 0;
+	static final Integer CALL_TAXI_STATUS_REJECTTED = 2;
+	static final Integer CALL_TAXI_STATUS_SUCCEED = 3;
+
 	static boolean mStopSendRequestThread = false;
 
 	static ArrayList<Request> mRequests = new ArrayList<Request>();
@@ -55,6 +60,7 @@ public class RequestProcessor {
 
 	static Object mMapViewLock = new Object();
 	static TaxiMapView mMapView = null;
+	static HashMap<Long, Integer> mCallTaxiRequestStatusMap = new HashMap<Long, Integer>();
 
 	static Object mUserGeoPointLock = new Object();
 	static GeoPoint mUserGeoPoint = null;
@@ -267,6 +273,7 @@ public class RequestProcessor {
 			mMyTaxiParam = null;
 			if (!removeRequest(CALL_TAXI_REQUEST))
 				request = generateCancelCallTaxiRequest(mCallTaxiRequestId);
+			mCallTaxiRequestStatusMap.remove(mCallTaxiRequestId);
 			++mCallTaxiRequestId;
 		}
 		if (request != null) {
@@ -318,31 +325,23 @@ public class RequestProcessor {
 		}
 	}
 
-	public static void sendCallTaxiRequest(String taxiPhoneNumber) {
+	public static long sendCallTaxiRequest(String taxiPhoneNumber) {
 		synchronized (mCallTaxiLock) {
 			if (mMyTaxiParam != null) {
-				AlertDialog dialog = new AlertDialog.Builder(mContext)
-						.setIcon(android.R.drawable.ic_dialog_info)
-						.setTitle("CallTaxiFail: ")
-						.setMessage("Already have a taxi")
-						.setPositiveButton("Locate", new OnClickListener() {
-							public void onClick(DialogInterface dialog,
-									int which) {
-								sendLocateTaxiRequest();
-							}
-						}).setNegativeButton("OK", null).create();
-				dialog.show();
-				return;
+				return -1;
 			} else {
 				++mCallTaxiRequestId;
+				mCallTaxiRequestStatusMap.put(mCallTaxiRequestId,
+						CALL_TAXI_STATUS_CALLING);
 				addRequest(generateCallTaxiRequest(mCallTaxiRequestId,
 						taxiPhoneNumber));
+				return mCallTaxiRequestId;
 			}
 		}
 	}
 
-	public static void sendCallTaxiRequest() {
-		sendCallTaxiRequest(null);
+	public static long sendCallTaxiRequest() {
+		return sendCallTaxiRequest(null);
 	}
 
 	public static void showCallTaxiSucceedDialog() {
@@ -370,9 +369,9 @@ public class RequestProcessor {
 		}
 	}
 
-	public static boolean isCallTaxiSucceed() {
+	public static int getCallTaxiStatus(long requestId) {
 		synchronized (mCallTaxiLock) {
-			return (mMyTaxiParam != null);
+			return mCallTaxiRequestStatusMap.get(requestId);
 		}
 	}
 
@@ -807,6 +806,20 @@ public class RequestProcessor {
 			return;
 		}
 		Log.i(TAG, "taxiPhoneNumber is " + taxiPhoneNumber);
+		JSONObject data = callTaxiReplyJson.optJSONObject("data");
+		if (data == null) {
+			Log.e(TAG, "data in call taxi reply should not be null!");
+			return;
+		}
+		boolean accept = data.optBoolean("accept");
+		if (!accept) {
+			Log.d(TAG, "call taxi request is rejected!");
+			synchronized (mMapViewLock) {
+				mCallTaxiRequestStatusMap.put(mCallTaxiRequestId,
+						CALL_TAXI_STATUS_REJECTTED);
+			}
+			return;
+		}
 
 		int callTaxiRequestId = callTaxiReplyJson.optInt("request_id", -1);
 		synchronized (mCallTaxiLock) {
@@ -814,17 +827,13 @@ public class RequestProcessor {
 				Log.w(TAG, "ignore call taxi response: " + callTaxiRequestId
 						+ " currentNumber is " + mCallTaxiRequestId);
 			} else {
-				if (callTaxiRequestId > mCallTaxiRequestId) {
-					Log.wtf(TAG, "callTaxiNumber " + callTaxiRequestId
-							+ " should not be larger than " + callTaxiRequestId);
-				} else {
-					synchronized (mMapViewLock) {
-						mMyTaxiParam = mMapView
-								.findInAroundTaxi(taxiPhoneNumber);
-						if (mMyTaxiParam != null) {
-							Log.e(TAG, "mMyTaxiParam should not be null!");
-						}
+				synchronized (mMapViewLock) {
+					mMyTaxiParam = mMapView.findInAroundTaxi(taxiPhoneNumber);
+					if (mMyTaxiParam == null) {
+						Log.e(TAG, "mMyTaxiParam should not be null!");
 					}
+					mCallTaxiRequestStatusMap.put(mCallTaxiRequestId,
+							CALL_TAXI_STATUS_SUCCEED);
 				}
 			}
 		}
