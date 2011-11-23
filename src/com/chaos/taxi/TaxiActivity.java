@@ -86,8 +86,6 @@ public class TaxiActivity extends MapActivity {
 		mLocateTaxiBtn = (Button) findViewById(R.id.locate_taxi_btn);
 		mFindTaxiBtn = (Button) findViewById(R.id.find_taxi_btn);
 
-		// TODO: currently only support call specified taxi
-		mCallTaxiBtn.setVisibility(View.INVISIBLE);
 		mCallTaxiBtn.setOnClickListener(new OnClickListener() {
 			public void onClick(View arg0) {
 				long requestId = RequestProcessor.sendCallTaxiRequest();

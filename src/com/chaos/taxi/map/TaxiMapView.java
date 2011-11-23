@@ -106,10 +106,9 @@ public class TaxiMapView extends MapView {
 			Log.wtf(TAG, "no user point specified in showUserOverlay!");
 			return;
 		}
-		
-		Log.d(TAG,
-				"showUserOverlay: " + param.mPoint.getLatitudeE6() + " "
-						+ param.mPoint.getLongitudeE6());
+
+		Log.d(TAG, "showUserOverlay: " + param.mPoint.getLatitudeE6() + " "
+				+ param.mPoint.getLongitudeE6());
 		/*
 		 * if (point == null) { Log.wtf(TAG,
 		 * "showUserOvdderlay with empty point. "); return; }
@@ -177,7 +176,7 @@ public class TaxiMapView extends MapView {
 
 	public void removeAroundOverlay() {
 		Iterator<TaxiOverlayItem> iter = mAroundTaxiOverlayItem.iterator();
-		while (iter != null) {
+		while (iter.hasNext()) {
 			mTaxiItemizedOverlay.removeOverlayItem(iter.next());
 		}
 		mAroundTaxiOverlayItem.clear();

@@ -42,7 +42,7 @@ public class TaxiUtil {
 	}
 
 	public static Location chooseBetterLocation(Location location1,
-			Location location2) {
+			Location location2) { 
 		if (location1 != null) {
 			Log.i(TAG, "Location1 : Lat: " + location1.getLatitude() + " Lng: "
 					+ location1.getLongitude());

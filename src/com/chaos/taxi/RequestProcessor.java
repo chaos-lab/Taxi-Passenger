@@ -110,6 +110,8 @@ public class RequestProcessor {
 			if (last.distanceTo(current) >= LOCATION_UPDATE_DISTANCE) {
 				addRequest(generateUserLocationUpdateRequest(point));
 			}
+		} else {
+			addRequest(generateUserLocationUpdateRequest(point));
 		}
 	}
 
@@ -268,61 +270,32 @@ public class RequestProcessor {
 	}
 
 	public static void cancelCallTaxiRequest() {
-		Request request = null;
-		synchronized (mCallTaxiLock) {
-			mMyTaxiParam = null;
-			if (!removeRequest(CALL_TAXI_REQUEST))
-				request = generateCancelCallTaxiRequest(mCallTaxiRequestId);
-			mCallTaxiRequestStatusMap.remove(mCallTaxiRequestId);
-			++mCallTaxiRequestId;
-		}
-		if (request != null) {
-			final Request req = request;
-			new Thread(new Runnable() {
-				public void run() {
-					while (true) {
-						Pair<Integer, JSONObject> ret = sendRequestToServer(req);
-						if (ret != null) {
-							if (ret.first == 200) {
-								if (ret.second == null) {
-									Log.e(TAG,
-											"cancelCallTaxiRequest: SUCCEED! server response is error! ");
-									return;
-								}
-								int status = -1;
-								try {
-									status = ret.second.getInt("status");
-								} catch (JSONException e1) {
-									e1.printStackTrace();
-								}
-								if (status == 0) {
-									Log.d(TAG, "cancel taxi request succeed!");
-									return;
-								} else {
-									// TODO: add support for other status codes
-									Log.e(TAG,
-											"cancelCallTaxiRequest: server return status is not 0! "
-													+ status);
-									return;
-								}
-
-							} else {
-								String message = null;
-								try {
-									message = ret.second.getString("message")
-											+ " status " + ret.first;
-								} catch (JSONException e) {
-									e.printStackTrace();
-									message = "CancelCallTaxi IS FAILED! status "
-											+ ret.first;
-								}
-								Log.d(TAG, ret.first + " " + message);
-							}
-						}
-					}
-				}
-			}).start();
-		}
+		return;
+		/*
+		 * Request request = null; synchronized (mCallTaxiLock) { mMyTaxiParam =
+		 * null; if (!removeRequest(CALL_TAXI_REQUEST)) request =
+		 * generateCancelCallTaxiRequest(mCallTaxiRequestId);
+		 * mCallTaxiRequestStatusMap.remove(mCallTaxiRequestId);
+		 * ++mCallTaxiRequestId; } if (request != null) { final Request req =
+		 * request; new Thread(new Runnable() { public void run() { while (true)
+		 * { Pair<Integer, JSONObject> ret = sendRequestToServer(req); if (ret
+		 * != null) { if (ret.first == 200) { if (ret.second == null) {
+		 * Log.e(TAG,
+		 * "cancelCallTaxiRequest: SUCCEED! server response is error! ");
+		 * return; } int status = -1; try { status =
+		 * ret.second.getInt("status"); } catch (JSONException e1) {
+		 * e1.printStackTrace(); } if (status == 0) { Log.d(TAG,
+		 * "cancel taxi request succeed!"); return; } else { // TODO: add
+		 * support for other status codes Log.e(TAG,
+		 * "cancelCallTaxiRequest: server return status is not 0! " + status);
+		 * return; }
+		 * 
+		 * } else { String message = null; try { message =
+		 * ret.second.getString("message") + " status " + ret.first; } catch
+		 * (JSONException e) { e.printStackTrace(); message =
+		 * "CancelCallTaxi IS FAILED! status " + ret.first; } Log.d(TAG,
+		 * ret.first + " " + message); } } } } }).start(); }
+		 */
 	}
 
 	public static long sendCallTaxiRequest(String taxiPhoneNumber) {
@@ -410,7 +383,7 @@ public class RequestProcessor {
 			}
 		} else {
 			if (executeRet.second == null) {
-				return "LOGIN IS FAILED! response format also error!";
+				Log.e(TAG, "LOGIN IS FAILED! response format also error!");
 			}
 			int status = -1;
 			try {
@@ -468,7 +441,7 @@ public class RequestProcessor {
 			}
 		} else {
 			if (executeRet.second == null) {
-				return "REGISTER IS FAILED! response format is also error!";
+				Log.e(TAG, "REGISTER IS FAILED! response format is also error!");
 			}
 			int status = -1;
 			try {
@@ -548,6 +521,7 @@ public class RequestProcessor {
 				+ callTaxiRequestId + " taxiPhoneNumber: " + taxiPhoneNumber);
 		JSONObject jsonObj = new JSONObject();
 		GeoPoint userPoint = getUserGeoPoint();
+		taxiPhoneNumber = "13851403984";
 		try {
 			jsonObj.put("type", CALL_TAXI_REQUEST);
 			jsonObj.put("from", TaxiActivity.sPhoneNumber);
@@ -560,7 +534,7 @@ public class RequestProcessor {
 			if (userPoint != null) {
 				temp.put("latitude", userPoint.getLatitudeE6());
 				temp.put("Longitude", userPoint.getLongitudeE6());
-				temp.put("phone_number", "123");
+				temp.put("phone_number", "13913391280");
 				temp.put("nickname", "souriki");
 			}
 			data.put("passenger", temp);
@@ -742,59 +716,21 @@ public class RequestProcessor {
 			return;
 		}
 
-		JSONObject messageListJson = jsonRet.optJSONObject("message");
-		if (messageListJson == null) {
+		JSONArray messageArrayJson = jsonRet.optJSONArray("messages");
+		if (messageArrayJson == null) {
 			Log.d(TAG, "no message in refresh response!");
 			return;
 		}
 
-		JSONObject callTaxiReplyJson = messageListJson
-				.optJSONObject(CALL_TAXI_RESPONSE);
-		if (callTaxiReplyJson != null) {
-			handleCallTaxiReplyJson(callTaxiReplyJson);
-		}
-
-		JSONObject taxiLocationJson = messageListJson
-				.optJSONObject(LOCATION_UPDATE_REQUEST);
-		if (taxiLocationJson != null) {
-			handleTaxiLocationUpdate(taxiLocationJson);
-		}
-
-		JSONObject callTaxiCompleteJson = messageListJson
-				.optJSONObject(CALL_TAXI_COMPLETE);
-		if (callTaxiCompleteJson != null) {
-			handleCallTaxiComplete(callTaxiCompleteJson);
-		}
+		handleJsonMessageArray(messageArrayJson);
 	}
 
-	private static void handleCallTaxiComplete(JSONObject callTaxiCompleteJson) {
-		synchronized (mCallTaxiLock) {
-			if (mMyTaxiParam == null) {
-				Log.w(TAG, "handleCallTaxiComplete: do not have a taxi!");
-				return;
-			} else {
-				Intent intent = new Intent(mContext,
-						CallTaxiCompleteActivity.class);
-				intent.putExtra("TaxiParam", mMyTaxiParam);
-				mMyTaxiParam = null;
-				mContext.startActivity(intent);
-			}
-		}
-	}
-
-	private static void handleTaxiLocationUpdate(JSONObject taxiLocationJson) {
-		synchronized (mCallTaxiLock) {
-			if (mMyTaxiParam == null) {
-				Log.w(TAG, "handleTaxiLocationUpdate: do not have a taxi!");
-				return;
-			} else {
-				try {
-					int latitude = taxiLocationJson.getInt("latitude");
-					int longitude = taxiLocationJson.getInt("longitude");
-					mMyTaxiParam.mPoint = new GeoPoint(latitude, longitude);
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
+	private static void handleJsonMessageArray(JSONArray messageArrayJson) {
+		for (int i = 0; i < messageArrayJson.length(); ++i) {
+			JSONObject jsonObject = messageArrayJson.optJSONObject(0);
+			String type = jsonObject.optString("type");
+			if (type != null && type.equals(CALL_TAXI_RESPONSE)) {
+				handleCallTaxiReplyJson(jsonObject);
 			}
 		}
 	}
@@ -825,18 +761,21 @@ public class RequestProcessor {
 		int callTaxiRequestId = callTaxiReplyJson.optInt("request_id", -1);
 		synchronized (mCallTaxiLock) {
 			if (callTaxiRequestId < mCallTaxiRequestId) {
-				Log.w(TAG, "ignore call taxi response: " + callTaxiRequestId
-						+ " currentNumber is " + mCallTaxiRequestId);
-			} else {
-				synchronized (mMapViewLock) {
-					mMyTaxiParam = mMapView.findInAroundTaxi(taxiPhoneNumber);
-					if (mMyTaxiParam == null) {
-						Log.e(TAG, "mMyTaxiParam should not be null!");
-					}
-					mCallTaxiRequestStatusMap.put(mCallTaxiRequestId,
-							CALL_TAXI_STATUS_SUCCEED);
-				}
+				Log.w(TAG, "current no ignore call taxi response: "
+						+ callTaxiRequestId + " currentNumber is "
+						+ mCallTaxiRequestId);
 			}
+			synchronized (mMapViewLock) {
+				mMyTaxiParam = mMapView.findInAroundTaxi(taxiPhoneNumber);
+				if (mMyTaxiParam == null) {
+					Log.e(TAG, "mMyTaxiParam should not be null!");
+					mMyTaxiParam = new TaxiOverlayItemParam(new GeoPoint(
+							32042962, 118784149), "123", "13851403984", "test");
+				}
+				mCallTaxiRequestStatusMap.put(mCallTaxiRequestId,
+						CALL_TAXI_STATUS_SUCCEED);
+			}
+
 		}
 	}
 }
