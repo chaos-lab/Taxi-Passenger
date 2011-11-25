@@ -21,9 +21,6 @@ public class TaxiActivity extends MapActivity {
 	private final static String TAG = "TaxiActivity";
 	static final int CALL_TAXI_REQUEST_CODE = 9188868;
 
-	static String sNickName = null;
-	static String sPhoneNumber = null;
-
 	LocationManager mLocationManager = null;
 	TaxiMapView mMapView = null;
 	Button mCallTaxiBtn = null;
@@ -39,7 +36,12 @@ public class TaxiActivity extends MapActivity {
 				Log.i(TAG, "Location changed : Lat: " + location.getLatitude()
 						+ " Lng: " + location.getLongitude());
 				GeoPoint point = getUserLastKnownGeoPoint();
+				if (point == null) {
+					Log.wtf(TAG, "point should not be null!");
+					return;
+				}
 				RequestProcessor.setUserGeoPoint(point);
+				RequestProcessor.sendLocateUserRequest();
 			}
 		}
 
@@ -86,15 +88,17 @@ public class TaxiActivity extends MapActivity {
 		mLocateTaxiBtn = (Button) findViewById(R.id.locate_taxi_btn);
 		mFindTaxiBtn = (Button) findViewById(R.id.find_taxi_btn);
 
+		// TODO: currently only support call specified taxi
+		mCallTaxiBtn.setVisibility(View.INVISIBLE);
 		mCallTaxiBtn.setOnClickListener(new OnClickListener() {
 			public void onClick(View arg0) {
-				long requestId = RequestProcessor.sendCallTaxiRequest();
-				if (requestId != -1) {
+				long requestKey = RequestProcessor.callTaxi();
+				if (requestKey != -1) {
 					Intent intent = new Intent(TaxiActivity.this,
 							WaitTaxiActivity.class);
 					intent.putExtra("WaitTaxiTime",
 							RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
-					intent.putExtra("RequestId", requestId);
+					intent.putExtra("RequestKey", requestKey);
 					startActivityForResult(intent, CALL_TAXI_REQUEST_CODE);
 				} else {
 					AlertDialog dialog = new AlertDialog.Builder(
@@ -181,7 +185,7 @@ public class TaxiActivity extends MapActivity {
 
 	@Override
 	public void onDestroy() {
-		RequestProcessor.logout();
+		RequestProcessor.signout();
 		super.onDestroy();
 	}
 

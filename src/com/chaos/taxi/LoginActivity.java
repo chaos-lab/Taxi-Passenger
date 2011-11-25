@@ -54,7 +54,7 @@ public class LoginActivity extends Activity {
 								"Login Fail: " + msg, 5000).show();
 					}
 				}
-			} 
+			}
 		});
 
 		register_btn.setOnClickListener(new OnClickListener() {

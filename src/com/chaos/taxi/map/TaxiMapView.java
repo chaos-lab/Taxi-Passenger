@@ -106,9 +106,10 @@ public class TaxiMapView extends MapView {
 			Log.wtf(TAG, "no user point specified in showUserOverlay!");
 			return;
 		}
-
-		Log.d(TAG, "showUserOverlay: " + param.mPoint.getLatitudeE6() + " "
-				+ param.mPoint.getLongitudeE6());
+		
+		Log.d(TAG,
+				"showUserOverlay: " + param.mPoint.getLatitudeE6() + " "
+						+ param.mPoint.getLongitudeE6());
 		/*
 		 * if (point == null) { Log.wtf(TAG,
 		 * "showUserOvdderlay with empty point. "); return; }

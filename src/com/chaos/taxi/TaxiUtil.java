@@ -17,7 +17,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 
-import com.chaos.taxi.RequestProcessor.Request;
+import com.chaos.taxi.RequestManager.Request;
 import com.google.android.maps.GeoPoint;
 
 import android.content.Context;
@@ -42,7 +42,7 @@ public class TaxiUtil {
 	}
 
 	public static Location chooseBetterLocation(Location location1,
-			Location location2) { 
+			Location location2) {
 		if (location1 != null) {
 			Log.i(TAG, "Location1 : Lat: " + location1.getLatitude() + " Lng: "
 					+ location1.getLongitude());
@@ -138,21 +138,21 @@ public class TaxiUtil {
 	}
 
 	private static String getServerAddressByRequestType(String requestType) {
-		if (requestType.equals(RequestProcessor.FIND_TAXI_REQUEST)) {
+		if (requestType.equals(RequestManager.FIND_TAXI_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/taxi/near";
-		} else if (requestType.equals(RequestProcessor.CALL_TAXI_REQUEST)) {
+		} else if (requestType.equals(RequestManager.CALL_TAXI_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/message";
-		} else if (requestType.equals(RequestProcessor.LOCATION_UPDATE_REQUEST)) {
+		} else if (requestType.equals(RequestManager.LOCATION_UPDATE_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/location/update";
-		} else if (requestType.equals(RequestProcessor.REFRESH_REQUEST)) {
+		} else if (requestType.equals(RequestManager.REFRESH_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/refresh";
 		}
 		return null;
 	}
 
 	public static boolean isGetRequest(String requestType) {
-		if (requestType.equals(RequestProcessor.REFRESH_REQUEST)
-				|| requestType.equals(RequestProcessor.FIND_TAXI_REQUEST)) {
+		if (requestType.equals(RequestManager.REFRESH_REQUEST)
+				|| requestType.equals(RequestManager.FIND_TAXI_REQUEST)) {
 			return true;
 		}
 		return false;

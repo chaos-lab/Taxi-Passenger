@@ -23,7 +23,7 @@ public class WaitTaxiActivity extends Activity {
 
 	Button waitTaxiBtn = null;
 	TextView waitTaxiTimeTv = null;
-	long mRequestId = -1;
+	long mRequestKey = -1;
 
 	Button keepWaitBtn = null;
 	Button cancelWaitBtn = null;
@@ -118,8 +118,8 @@ public class WaitTaxiActivity extends Activity {
 		Intent intent = getIntent();
 		mWaitTaxiTime = intent.getIntExtra("WaitTaxiTIme",
 				RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
-		mRequestId = getIntent().getLongExtra("RequestId", -1);
-		
+		mRequestKey = getIntent().getLongExtra("RequestKey", -1);
+
 		setWaitTaxiView();
 	}
 
@@ -141,14 +141,14 @@ public class WaitTaxiActivity extends Activity {
 					e.printStackTrace();
 				}
 
-				int status = RequestProcessor.getCallTaxiStatus(mRequestId);
+				int status = RequestProcessor.popCallTaxiStatus(mRequestKey);
 				if (status == RequestProcessor.CALL_TAXI_STATUS_SUCCEED) {
 					WaitTaxiActivity.this.setResult(SUCCEED_WAIT);
 					WaitTaxiActivity.this.finish();
-				} else if (status == RequestProcessor.CALL_TAXI_STATUS_REJECTTED) {
+				} else if (status == RequestProcessor.CALL_TAXI_STATUS_REJECTED) {
 					setResult(REJECT_WAIT);
 					WaitTaxiActivity.this.finish();
-				} 
+				}
 
 				decreaseSetLeftWaitTaxiTime();
 				if (0 == getLeftWaitTaxiTime()) {
