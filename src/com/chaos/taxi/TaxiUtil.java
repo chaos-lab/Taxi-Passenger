@@ -141,11 +141,15 @@ public class TaxiUtil {
 		if (requestType.equals(RequestManager.FIND_TAXI_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/taxi/near";
 		} else if (requestType.equals(RequestManager.CALL_TAXI_REQUEST)) {
-			return RequestProcessor.HTTPSERVER + "/message";
+			return RequestProcessor.HTTPSERVER + "/service/create";
 		} else if (requestType.equals(RequestManager.LOCATION_UPDATE_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/location/update";
 		} else if (requestType.equals(RequestManager.REFRESH_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/refresh";
+		} else if (requestType.equals(RequestManager.CANCEL_CALL_TAXI_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/service/cancel";
+		} else if (requestType.equals(RequestManager.CALL_TAXI_COMPLETE)) {
+			return RequestProcessor.HTTPSERVER + "/service/complete";
 		}
 		return null;
 	}
