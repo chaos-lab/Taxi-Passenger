@@ -19,7 +19,7 @@ import android.widget.Button;
 
 public class TaxiActivity extends MapActivity {
 	private final static String TAG = "TaxiActivity";
-	static final int CALL_TAXI_REQUEST_CODE = 9188868;
+	public static final int CALL_TAXI_REQUEST_CODE = 9188868;
 
 	LocationManager mLocationManager = null;
 	TaxiMapView mMapView = null;
@@ -92,31 +92,7 @@ public class TaxiActivity extends MapActivity {
 		mCallTaxiBtn.setVisibility(View.INVISIBLE);
 		mCallTaxiBtn.setOnClickListener(new OnClickListener() {
 			public void onClick(View arg0) {
-				long requestKey = RequestProcessor.callTaxi();
-				if (requestKey != -1) {
-					Intent intent = new Intent(TaxiActivity.this,
-							WaitTaxiActivity.class);
-					intent.putExtra("WaitTaxiTime",
-							RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
-					intent.putExtra("RequestKey", requestKey);
-					startActivityForResult(intent, CALL_TAXI_REQUEST_CODE);
-				} else {
-					AlertDialog dialog = new AlertDialog.Builder(
-							TaxiActivity.this)
-							.setIcon(android.R.drawable.ic_dialog_info)
-							.setTitle("CallTaxiFail: ")
-							.setMessage("Already have a taxi")
-							.setPositiveButton("Locate",
-									new DialogInterface.OnClickListener() {
-										public void onClick(
-												DialogInterface dialog,
-												int which) {
-											RequestProcessor
-													.sendLocateTaxiRequest();
-										}
-									}).setNegativeButton("OK", null).create();
-					dialog.show();
-				}
+				RequestProcessor.callTaxi();
 			}
 		});
 

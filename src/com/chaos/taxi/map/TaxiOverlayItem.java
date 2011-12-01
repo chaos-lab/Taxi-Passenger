@@ -1,14 +1,18 @@
 package com.chaos.taxi.map;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.DialogInterface.OnClickListener;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 
 import com.chaos.taxi.RequestProcessor;
+import com.chaos.taxi.TaxiActivity;
+import com.chaos.taxi.WaitTaxiActivity;
 import com.google.android.maps.GeoPoint;
 
 public class TaxiOverlayItem extends MyOverlayItem {
@@ -70,6 +74,7 @@ public class TaxiOverlayItem extends MyOverlayItem {
 				+ param.mNickName);
 		Log.d(TAG, "CarNumber is " + param.mCarNumber + "PhoneNumber is "
 				+ param.mPhoneNumber + "NickName is " + param.mNickName);
+		mContext = context;
 		mParam = param;
 		if (isMyCar) {
 			// this.setMarker(mContext.getResources().getDrawable(R.drawable.my_car));
@@ -94,8 +99,7 @@ public class TaxiOverlayItem extends MyOverlayItem {
 						+ mParam.mNickName)
 				.setPositiveButton("CallTaxi", new OnClickListener() {
 					public void onClick(DialogInterface dialog, int which) {
-						RequestProcessor
-								.callTaxi(mParam.mPhoneNumber);
+						RequestProcessor.callTaxi();
 					}
 				}).setNegativeButton("Return", null);
 		dialog.show();

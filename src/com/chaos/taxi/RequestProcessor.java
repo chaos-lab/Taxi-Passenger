@@ -31,6 +31,7 @@ import com.chaos.taxi.map.TaxiOverlayItem.TaxiOverlayItemParam;
 import com.chaos.taxi.map.UserOverlayItem.UserOverlayItemParam;
 import com.google.android.maps.GeoPoint;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -49,7 +50,7 @@ public class RequestProcessor {
 
 	static final int CALLSERVER_INTERVAL = 5000;
 	static final float LOCATION_UPDATE_DISTANCE = (float) 5.0; // 5 meters
-	static final int REQUEST_TIMEOUT_THRESHOLD = 30000;
+	public static final int REQUEST_TIMEOUT_THRESHOLD = 30000;
 
 	static final Integer CALL_TAXI_STATUS_CALLING = 0;
 	static final Integer CALL_TAXI_STATUS_REJECTED = 2;
@@ -183,61 +184,28 @@ public class RequestProcessor {
 		if (httpRet == null) {
 			return;
 		}
-
-		// handle the find taxi result
-		if (httpRet.first == 200) {
-			JSONObject jsonRet = httpRet.second;
-			if (jsonRet == null) {
-				Log.e(TAG,
-						"sendFindTaxiRequest: SUCCEED! server response is error!");
-				Toast.makeText(mContext,
-						"sendFindTaxiRequest: server response is error!", 4000)
-						.show();
-				return;
-			}
-
-			int status = -1;
-			try {
-				status = jsonRet.getInt("status");
-			} catch (JSONException e1) {
-				e1.printStackTrace();
-			}
-			if (status != 0) {
-				// TODO: add support for other status codes
-				Log.e(TAG,
-						"sendFindTaxiRequest: server return status is not 0! "
-								+ status);
-				Toast.makeText(mContext,
-						"sendFindTaxiRequest: status is not 0! " + status, 4000)
-						.show();
-				return;
-			}
-			try {
-				JSONArray taxis = jsonRet.getJSONArray("taxis");
-				if (taxis != null) {
-					for (int i = 0; i < taxis.length(); ++i) {
-						JSONObject taxiInfo = taxis.getJSONObject(i);
-						GeoPoint point = new GeoPoint(
-								taxiInfo.getInt("latitude"),
-								taxiInfo.getInt("longitude"));
-						String carNumber = taxiInfo.getString("car_number");
-						String phoneNumber = taxiInfo.getString("phone_number");
-						String nickName = taxiInfo.getString("nickname");
-						TaxiOverlayItemParam param = new TaxiOverlayItemParam(
-								point, carNumber, phoneNumber, nickName);
-						synchronized (mMapViewLock) {
-							mMapView.addAroundTaxiOverlay(param);
-						}
+		try {
+			JSONArray taxis = httpRet.second.getJSONArray("taxis");
+			if (taxis != null) {
+				Log.d(TAG, "has taxis! " + taxis.length());
+				mMapView.removeAroundOverlay();
+				for (int i = 0; i < taxis.length(); ++i) {
+					JSONObject taxiInfo = taxis.getJSONObject(i);
+					GeoPoint point = new GeoPoint(
+							(int) taxiInfo.getDouble("latitude") * 1000000,
+							(int) taxiInfo.getDouble("longitude") * 1000000);
+					String carNumber = taxiInfo.getString("car_number");
+					String phoneNumber = taxiInfo.getString("phone_number");
+					String nickName = taxiInfo.getString("nickname");
+					TaxiOverlayItemParam param = new TaxiOverlayItemParam(
+							point, carNumber, phoneNumber, nickName);
+					synchronized (mMapViewLock) {
+						mMapView.addAroundTaxiOverlay(param);
 					}
 				}
-			} catch (JSONException e) {
-				e.printStackTrace();
 			}
-		} else {
-			Log.e(TAG, "sendFindTaxiRequest: HttpFail: " + httpRet.first);
-			Toast.makeText(mContext,
-					"sendFindTaxiRequest: HttpFail: " + httpRet.first, 4000)
-					.show();
+		} catch (JSONException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -257,46 +225,10 @@ public class RequestProcessor {
 					while (true) {
 						Pair<Integer, JSONObject> ret = sendRequestToServer(req);
 						if (ret != null) {
-							if (ret.first == 200) {
-								if (ret.second == null) {
-									Log.e(TAG,
-											"cancelCallTaxiRequest: SUCCEED! server response is error! ");
-									Toast.makeText(
-											mContext,
-											"CallTaxiRequest: Server gives null response!",
-											4000).show();
-									return;
-								}
-								int status = -1;
-								try {
-									status = ret.second.getInt("status");
-								} catch (JSONException e1) {
-									e1.printStackTrace();
-								}
-								if (status == 0) {
-									Log.d(TAG, "cancel taxi request succeed!");
-									return;
-								} else {
-									// TODO: add support for other status codes
-									Log.e(TAG,
-											"cancelCallTaxiRequest: server return status is not 0! "
-													+ status);
-									Toast.makeText(
-											mContext,
-											"CallTaxiRequest: Server return "
-													+ status, 4000).show();
-									return;
-								}
-
-							} else {
-								Log.e(TAG,
-										"cancelCallTaxiRequest failed: HttpStatus "
-												+ ret.first);
-								Toast.makeText(
-										mContext,
-										"CallTaxiRequest: HttpStatus "
-												+ ret.first, 4000).show();
-							}
+							return;
+						} else {
+							Log.d(TAG, "cancel request fail!"); 
+							return;
 						}
 					}
 				}
@@ -304,23 +236,45 @@ public class RequestProcessor {
 		}
 	}
 
-	public static long callTaxi(String taxiPhoneNumber) {
+	public static void callTaxi(String taxiPhoneNumber) {
+		long requestKey = 1;
 		synchronized (mCallTaxiLock) {
 			if (mMyTaxiParam != null) {
-				return -1;
+				requestKey = -1;
 			} else {
 				++mCallTaxiRequestKey;
 				mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
 						CALL_TAXI_STATUS_CALLING);
 				RequestManager.addCallTaxiRequest(getUserGeoPoint(),
 						mCallTaxiRequestKey, taxiPhoneNumber);
-				return mCallTaxiRequestKey;
+				requestKey = mCallTaxiRequestKey;
 			}
+		}
+		if (requestKey != -1) {
+			Intent intent = new Intent(mContext, WaitTaxiActivity.class);
+			intent.putExtra("WaitTaxiTime",
+					RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
+			intent.putExtra("RequestKey", requestKey);
+			((Activity) mContext).startActivityForResult(intent,
+					TaxiActivity.CALL_TAXI_REQUEST_CODE);
+		} else {
+			AlertDialog dialog = new AlertDialog.Builder(mContext)
+					.setIcon(android.R.drawable.ic_dialog_info)
+					.setTitle("CallTaxiFail: ")
+					.setMessage("Already have a taxi")
+					.setPositiveButton("Locate",
+							new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog,
+										int which) {
+									RequestProcessor.sendLocateTaxiRequest();
+								}
+							}).setNegativeButton("OK", null).create();
+			dialog.show();
 		}
 	}
 
-	public static long callTaxi() {
-		return callTaxi(null);
+	public static void callTaxi() {
+		callTaxi(null);
 	}
 
 	public static void showCallTaxiSucceedDialog() {
@@ -630,8 +584,10 @@ public class RequestProcessor {
 				return;
 			} else {
 				try {
-					int latitude = taxiLocationJson.getInt("latitude");
-					int longitude = taxiLocationJson.getInt("longitude");
+					int latitude = (int) (taxiLocationJson
+							.getDouble("latitude") * 1000000);
+					int longitude = (int) (taxiLocationJson
+							.getDouble("longitude") * 1000000);
 					mMyTaxiParam.mPoint = new GeoPoint(latitude, longitude);
 				} catch (JSONException e) {
 					e.printStackTrace();

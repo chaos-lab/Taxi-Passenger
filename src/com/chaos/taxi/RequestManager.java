@@ -51,8 +51,8 @@ public class RequestManager {
 		}
 		JSONObject jsonObj = new JSONObject();
 		try {
-			jsonObj.put("latitude", point.getLatitudeE6());
-			jsonObj.put("longitude", point.getLongitudeE6());
+			jsonObj.put("latitude", point.getLatitudeE6() / 1000000.0);
+			jsonObj.put("longitude", point.getLongitudeE6() / 1000000.0);
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return;
@@ -70,13 +70,13 @@ public class RequestManager {
 		JSONObject obj = new JSONObject();
 		JSONObject jsonObj = new JSONObject();
 		try {
-			jsonObj.put("latitude", userPoint.getLatitudeE6());
-			jsonObj.put("longitude", userPoint.getLongitudeE6());
+			jsonObj.put("latitude", userPoint.getLatitudeE6() / 1000000.0);
+			jsonObj.put("longitude", userPoint.getLongitudeE6() / 1000000.0);
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return null;
 		}
-		
+
 		return new Request(FIND_TAXI_REQUEST, jsonObj);
 	}
 
@@ -93,8 +93,10 @@ public class RequestManager {
 			}
 			JSONObject locationJson = new JSONObject();
 			if (userPoint != null) {
-				locationJson.put("latitude", userPoint.getLatitudeE6());
-				locationJson.put("longitude", userPoint.getLongitudeE6());
+				locationJson.put("latitude",
+						userPoint.getLatitudeE6() / 1000000.0);
+				locationJson.put("longitude",
+						userPoint.getLongitudeE6() / 1000000.0);
 			} else {
 				Log.w(TAG, "CallTaxi: userPoint is still null!");
 			}
