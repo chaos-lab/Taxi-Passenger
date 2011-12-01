@@ -137,19 +137,27 @@ public class TaxiUtil {
 		CookieSyncManager.getInstance().sync();
 	}
 
-	private static String getServerAddressByRequestType(String requestType) {
+	public static String getServerAddressByRequestType(String requestType) {
 		if (requestType.equals(RequestManager.FIND_TAXI_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/taxi/near";
 		} else if (requestType.equals(RequestManager.CALL_TAXI_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/service/create";
 		} else if (requestType.equals(RequestManager.LOCATION_UPDATE_REQUEST)) {
-			return RequestProcessor.HTTPSERVER + "/location/update";
+			return RequestProcessor.HTTPSERVER + "/passenger/location/update";
 		} else if (requestType.equals(RequestManager.REFRESH_REQUEST)) {
-			return RequestProcessor.HTTPSERVER + "/refresh";
+			return RequestProcessor.HTTPSERVER + "/passenger/refresh";
 		} else if (requestType.equals(RequestManager.CANCEL_CALL_TAXI_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/service/cancel";
 		} else if (requestType.equals(RequestManager.CALL_TAXI_COMPLETE)) {
 			return RequestProcessor.HTTPSERVER + "/service/complete";
+		} else if (requestType.equals(RequestManager.LOCATION_UPDATE_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/passenger/location/update";
+		} else if (requestType.equals(RequestManager.SIGNIN_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/passenger/signin";
+		} else if (requestType.equals(RequestManager.REGISTER_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/passenger/signup";
+		} else if (requestType.equals(RequestManager.SIGNOUT_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/passenger/signout";
 		}
 		return null;
 	}
@@ -193,7 +201,7 @@ public class TaxiUtil {
 						"request json str is "
 								+ request.mRequestJson.toString());
 				serverAddress += "?json_data="
-						+ URLEncoder.encode(request.mRequestJson.toString());
+						+ URLEncoder.encode(request.mRequestJson.toString()); 
 				Log.d(TAG, "serverAddress now is " + serverAddress);
 			} /*
 			 * else { serverAddress += "?json_data={}"; }

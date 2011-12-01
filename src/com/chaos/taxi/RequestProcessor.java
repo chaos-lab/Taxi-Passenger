@@ -11,7 +11,16 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.conn.params.ConnManagerParams;
+import org.apache.http.conn.params.ConnPerRouteBean;
+import org.apache.http.conn.scheme.PlainSocketFactory;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,7 +45,7 @@ public class RequestProcessor {
 	private static final String TAG = "RequestProcessor";
 	static final String LOGIN_SUCCESS = "LOGIN_SUCCESS";
 	static final String REGISTER_SUCCESS = "REGISTER_SUCESS";
-	static final String HTTPSERVER = "http://taxi.no.de/passenger";
+	static final String HTTPSERVER = "http://taxi.no.de";
 
 	static final int CALLSERVER_INTERVAL = 5000;
 	static final float LOCATION_UPDATE_DISTANCE = (float) 5.0; // 5 meters
@@ -48,7 +57,7 @@ public class RequestProcessor {
 	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 3;
 
 	static boolean mStopSendRequestThread = true;
-	static Thread mSendRequestThread = new SendRequestThread();
+	static Thread mSendRequestThread = null;
 
 	static Context mContext = null;
 
@@ -63,7 +72,33 @@ public class RequestProcessor {
 	static long mCallTaxiRequestKey = System.currentTimeMillis();
 	static HashMap<Long, Integer> mCallTaxiRequestStatusMap = new HashMap<Long, Integer>();
 
-	static DefaultHttpClient mHttpClient = new DefaultHttpClient();
+	static final int MAX_TOTAL_CONNECTIONS = 100;
+	static final int MAX_ROUTE_CONNECTIONS = 100;
+	static final int WAIT_TIMEOUT = 10 * 1000; // 10 seconds
+	static final int READ_TIMEOUT = 20 * 1000; // 20 seconds
+	static final int CONNECT_TIMEOUT = 60 * 60 * 1000; // 1 hour
+	static DefaultHttpClient mHttpClient = null;
+
+	static {
+		BasicHttpParams httpParams = new BasicHttpParams();
+		ConnManagerParams.setMaxTotalConnections(httpParams,
+				MAX_TOTAL_CONNECTIONS);
+		ConnManagerParams.setTimeout(httpParams, WAIT_TIMEOUT);
+		ConnPerRouteBean connPerRoute = new ConnPerRouteBean(
+				MAX_ROUTE_CONNECTIONS);
+		ConnManagerParams.setMaxConnectionsPerRoute(httpParams, connPerRoute);
+		HttpConnectionParams.setConnectionTimeout(httpParams, CONNECT_TIMEOUT);
+		HttpConnectionParams.setSoTimeout(httpParams, READ_TIMEOUT);
+
+		SchemeRegistry registry = new SchemeRegistry();
+		registry.register(new Scheme("http", PlainSocketFactory
+				.getSocketFactory(), 80));
+		registry.register(new Scheme("https", SSLSocketFactory
+				.getSocketFactory(), 443));
+
+		mHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager(
+				httpParams, registry), httpParams);
+	}
 
 	public static void initRequestProcessor(Context context, TaxiMapView mapView) {
 		mContext = context;
@@ -327,42 +362,14 @@ public class RequestProcessor {
 	public static void signout() {
 		stopSendRequestThread();
 
-		HttpPost httpPost = new HttpPost(HTTPSERVER + "/signout");
-		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
-				"Signout");
-		if (executeRet.first != 200) {
-			Log.e(TAG, "SIGNOUT fail, HttpStatus: " + executeRet.first);
-			// Toast.makeText(mContext,
-			// "SIGNOUT fail, HttpStatus: " + executeRet.first, 5000)
-			// .show();
-			return;
-		} else {
-			if (executeRet.second == null) {
-				Log.e(TAG, "SIGNOUT IS FAILED! response format also error!");
-				// Toast.makeText(mContext,
-				// "SIGNOUT fail, Server return null response", 5000)
-				// .show();
-				return;
-			}
-			int status = -1;
-			try {
-				status = executeRet.second.getInt("status");
-			} catch (JSONException e1) {
-				e1.printStackTrace();
-			}
-			if (status != 0) {
-				// TODO: add detail support for other status codes
-				Log.e(TAG, "SIGNOUT: server return status is not 0! " + status);
-				// Toast.makeText(mContext,
-				// "SIGNOUT fail, Server return " + status, 5000).show();
-			} else {
-				Log.d(TAG, "SIGNOUT success.");
-			}
-		}
+		HttpPost httpPost = new HttpPost(
+				TaxiUtil.getServerAddressByRequestType(RequestManager.SIGNOUT_REQUEST));
+		executeHttpRequest(httpPost, "Signout");
 	}
 
 	public static String login(String phoneNumber, String password) {
-		HttpPost httpPost = new HttpPost(HTTPSERVER + "/signin");
+		HttpPost httpPost = new HttpPost(
+				TaxiUtil.getServerAddressByRequestType(RequestManager.SIGNIN_REQUEST));
 		JSONObject signinJson = new JSONObject();
 		try {
 			signinJson.put("phone_number", phoneNumber);
@@ -375,30 +382,11 @@ public class RequestProcessor {
 
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
 				"Login");
-		if (executeRet.first != 200) {
-			Log.e(TAG, "login fail, status code is " + executeRet.first);
-			return "LOGIN FAILED! HttpStatus: " + executeRet.first;
+		if (executeRet != null) {
+			startSendRequestThread();
+			return LOGIN_SUCCESS;
 		} else {
-			if (executeRet.second == null) {
-				return "LOGIN IS FAILED! server return null response!";
-			} else {
-				int status = -1;
-				try {
-					status = executeRet.second.getInt("status");
-				} catch (JSONException e1) {
-					Log.e(TAG, "Cannot parse login response: "
-							+ executeRet.second.toString());
-					e1.printStackTrace();
-				}
-				if (status != 0) {
-					// TODO: add detail support for other status codes
-					Log.e(TAG, "login: server return status is not 0! "
-							+ status);
-					return "login fail: server return status: " + status;
-				}
-				startSendRequestThread();
-				return LOGIN_SUCCESS;
-			}
+			return "LOGIN_FAIL";
 		}
 	}
 
@@ -406,6 +394,7 @@ public class RequestProcessor {
 		Log.d(TAG, "startSendRequestThread!");
 		if (mStopSendRequestThread) {
 			mStopSendRequestThread = false;
+			mSendRequestThread = new SendRequestThread();
 			mSendRequestThread.start();
 		}
 	}
@@ -417,6 +406,7 @@ public class RequestProcessor {
 			try {
 				if (mSendRequestThread != null) {
 					mSendRequestThread.join();
+					mSendRequestThread = null;
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -426,7 +416,8 @@ public class RequestProcessor {
 
 	public static String register(String nickName, String phoneNumber,
 			String password) {
-		HttpPost httpPost = new HttpPost(HTTPSERVER + "/signup");
+		HttpPost httpPost = new HttpPost(
+				TaxiUtil.getServerAddressByRequestType(RequestManager.REGISTER_REQUEST));
 		JSONObject registerJson = new JSONObject();
 		try {
 			registerJson.put("nickname", nickName);
@@ -440,25 +431,10 @@ public class RequestProcessor {
 
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
 				"Register");
-		if (executeRet.first != 200) {
-			Log.e(TAG, "register fail, status code is " + executeRet.first);
-			return "REGISTER FAILED! HttpStatus: " + executeRet.first;
+		if (executeRet != null) {
+			return REGISTER_SUCCESS;
 		} else {
-			if (executeRet.second == null) {
-				return "REGISTER IS FAILED! response format is also error!";
-			}
-			int status = -1;
-			try {
-				status = executeRet.second.getInt("status");
-			} catch (JSONException e1) {
-				e1.printStackTrace();
-			}
-			if (status != 0) {
-				return "REGISTER IS FAILED! status. " + status;
-			} else {
-				startSendRequestThread();
-				return REGISTER_SUCCESS;
-			}
+			return "REGISTER_FAIL";
 		}
 	}
 
@@ -490,12 +466,24 @@ public class RequestProcessor {
 				if (str == null) {
 					return new Pair<Integer, JSONObject>(statusCode, null);
 				} else {
+					JSONObject retJson = new JSONObject(str);
+					int status = retJson.optInt("status", -1);
+					if (status == 1) {
+						// need relogin
+						// TODO: start relogin activity
+						return null;
+					} else if (status != 0) {
+						// TODO: other status codes
+						return null;
+					}
 					return new Pair<Integer, JSONObject>(statusCode,
 							new JSONObject(str));
 				}
 			} else {
 				Log.w(TAG, "HttpFail. StatusCode is " + statusCode);
-				return new Pair<Integer, JSONObject>(statusCode, null);
+				Toast.makeText(mContext, "HTTP Fail! StatusCode: ", statusCode)
+						.show();
+				return null;
 			}
 		} catch (ClientProtocolException e) {
 			exceptionMsg = "ClientProtocolException: " + e.getMessage();
@@ -560,30 +548,7 @@ public class RequestProcessor {
 					continue;
 				}
 
-				Pair<Integer, JSONObject> httpRet = sendRequestToServer(request);
-				if (httpRet == null) {
-					continue;
-				}
-				if (httpRet.first != 200) {
-					Log.e(TAG, "sendRequest: " + request.mRequestType
-							+ ". status is " + httpRet.first);
-				} else if (httpRet.first == 200) {
-					if (httpRet.second == null) {
-						Log.e(TAG, "sendRequest: " + request.mRequestType
-								+ " fail! server return null response!");
-						continue;
-					}
-					int status = -1;
-					try {
-						status = httpRet.second.getInt("status");
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
-					if (status != 0) {
-						Log.e(TAG, "sendRequest: " + request.mRequestType
-								+ " fail! status is " + status);
-					}
-				}
+				sendRequestToServer(request);
 			}
 		}
 	};
@@ -596,9 +561,6 @@ public class RequestProcessor {
 			return;
 		}
 		Log.d(TAG, "refresh request status is " + httpRet.first);
-		if (httpRet.first != 200) {
-			return;
-		}
 		// handle the result
 		handleRefreshResponseJson(httpRet.second);
 	}

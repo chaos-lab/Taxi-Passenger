@@ -20,6 +20,9 @@ public class RequestManager {
 	static final String FIND_TAXI_REQUEST = "find-taxi";
 	static final String LOCATION_UPDATE_REQUEST = "location-update";
 	static final String REFRESH_REQUEST = "refresh-request";
+	final static String SIGNIN_REQUEST = "signin-request";
+	final static String REGISTER_REQUEST = "register-request";
+	final static String SIGNOUT_REQUEST = "signout-request";
 
 	static ArrayList<Request> mRequests = new ArrayList<Request>();
 
@@ -49,7 +52,7 @@ public class RequestManager {
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("latitude", point.getLatitudeE6());
-			jsonObj.put("Longitude", point.getLongitudeE6());
+			jsonObj.put("longitude", point.getLongitudeE6());
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return;
@@ -64,14 +67,16 @@ public class RequestManager {
 			return null;
 		}
 
+		JSONObject obj = new JSONObject();
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("latitude", userPoint.getLatitudeE6());
-			jsonObj.put("Longitude", userPoint.getLongitudeE6());
+			jsonObj.put("longitude", userPoint.getLongitudeE6());
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return null;
 		}
+		
 		return new Request(FIND_TAXI_REQUEST, jsonObj);
 	}
 
@@ -89,7 +94,7 @@ public class RequestManager {
 			JSONObject locationJson = new JSONObject();
 			if (userPoint != null) {
 				locationJson.put("latitude", userPoint.getLatitudeE6());
-				locationJson.put("Longitude", userPoint.getLongitudeE6());
+				locationJson.put("longitude", userPoint.getLongitudeE6());
 			} else {
 				Log.w(TAG, "CallTaxi: userPoint is still null!");
 			}

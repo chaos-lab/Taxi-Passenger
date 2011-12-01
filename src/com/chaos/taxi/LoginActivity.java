@@ -72,9 +72,9 @@ public class LoginActivity extends Activity {
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == REGISTER_REQUEST_CODE
 				&& resultCode == RegisterActivity.REGISTER_SUCCESS_CODE) {
-			LoginActivity.this.startActivity(new Intent(LoginActivity.this,
-					TaxiActivity.class));
-			LoginActivity.this.finish();
+			// LoginActivity.this.startActivity(new Intent(LoginActivity.this,
+			// TaxiActivity.class));
+			// LoginActivity.this.finish();
 		}
 	}
 }

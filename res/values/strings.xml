@@ -18,6 +18,7 @@
     <string name="KeepWaitingStr">KeepWaiting</string>
     <string name="OkStr">OK</string>
     <string name="PhoneNumberStr">PhoneNumber</string>
+    <string name="ReloginNoticeStr">Login session timeout. You need relogin!</string>
     
 
 </resources>

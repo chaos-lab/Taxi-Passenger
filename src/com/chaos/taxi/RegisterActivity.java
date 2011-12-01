@@ -1,6 +1,8 @@
 package com.chaos.taxi;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -29,7 +31,7 @@ public class RegisterActivity extends Activity {
 		mRegisterButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				String nickName = mNickNameET.getText().toString();
-				String phoneNumber= mPhoneNumberET.getText().toString();
+				String phoneNumber = mPhoneNumberET.getText().toString();
 				String password = mPasswordET.getText().toString();
 
 				if (nickName == null || nickName.equals("")) {
@@ -46,11 +48,23 @@ public class RegisterActivity extends Activity {
 							phoneNumber, password);
 					if (message.equals(RequestProcessor.REGISTER_SUCCESS)) {
 						setResult(REGISTER_SUCCESS_CODE);
-						RegisterActivity.this.finish();
+						AlertDialog.Builder dialog = new AlertDialog.Builder(
+								RegisterActivity.this);
+						dialog.setTitle("Register Success!");
+						dialog.setMessage("Register Success!")
+								.setNegativeButton("OK",
+										new DialogInterface.OnClickListener() {
+											public void onClick(
+													DialogInterface dialog,
+													int which) {
+												RegisterActivity.this.finish();
+											}
+										});
+						dialog.show();
 					} else {
 						Toast.makeText(RegisterActivity.this, message, 5000);
 					}
-				}
+				} 
 			}
 		});
 	}
