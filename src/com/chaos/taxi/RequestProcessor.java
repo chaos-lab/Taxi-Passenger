@@ -72,6 +72,7 @@ public class RequestProcessor {
 	static TaxiOverlayItemParam mMyTaxiParam = null;
 	static long mCallTaxiRequestKey = System.currentTimeMillis();
 	static HashMap<Long, Integer> mCallTaxiRequestStatusMap = new HashMap<Long, Integer>();
+	static HashMap<Long, String> mCallTaxiPhoneNumberMap = new HashMap<Long, String>();
 
 	static final int MAX_TOTAL_CONNECTIONS = 100;
 	static final int MAX_ROUTE_CONNECTIONS = 100;
@@ -227,7 +228,7 @@ public class RequestProcessor {
 						if (ret != null) {
 							return;
 						} else {
-							Log.d(TAG, "cancel request fail!"); 
+							Log.d(TAG, "cancel request fail!");
 							return;
 						}
 					}
@@ -247,6 +248,8 @@ public class RequestProcessor {
 						CALL_TAXI_STATUS_CALLING);
 				RequestManager.addCallTaxiRequest(getUserGeoPoint(),
 						mCallTaxiRequestKey, taxiPhoneNumber);
+				mCallTaxiPhoneNumberMap.put(mCallTaxiRequestKey,
+						taxiPhoneNumber);
 				requestKey = mCallTaxiRequestKey;
 			}
 		}
@@ -598,18 +601,8 @@ public class RequestProcessor {
 
 	private static void handleCallTaxiReplyJson(JSONObject callTaxiReplyJson) {
 		Log.d(TAG, "handle call taxi reply!");
-		String taxiPhoneNumber = callTaxiReplyJson.optString("from");
-		if (taxiPhoneNumber == null) {
-			Log.wtf(TAG, "taxiPhoneNumber is null in call taxi reply!!!");
-			return;
-		}
-		Log.i(TAG, "taxiPhoneNumber is " + taxiPhoneNumber);
-		JSONObject data = callTaxiReplyJson.optJSONObject("data");
-		if (data == null) {
-			Log.e(TAG, "data in call taxi reply should not be null!");
-			return;
-		}
-		boolean accept = data.optBoolean("accept");
+
+		boolean accept = callTaxiReplyJson.optBoolean("accept");
 		if (!accept) {
 			Log.d(TAG, "call taxi request is rejected!");
 			synchronized (mMapViewLock) {
@@ -625,6 +618,15 @@ public class RequestProcessor {
 				Log.w(TAG, "ignore call taxi response: " + callTaxiRequestKey
 						+ " currentNumber is " + mCallTaxiRequestKey);
 			} else {
+				String taxiPhoneNumber = mCallTaxiPhoneNumberMap
+						.get(callTaxiRequestKey);
+				if (taxiPhoneNumber == null) {
+					taxiPhoneNumber = callTaxiReplyJson.optString("driver");
+				}
+				if (taxiPhoneNumber == null) {
+					Log.e(TAG, "no driver number in reply!");
+					return;
+				}
 				synchronized (mMapViewLock) {
 					mMyTaxiParam = mMapView.findInAroundTaxi(taxiPhoneNumber);
 					if (mMyTaxiParam == null) {

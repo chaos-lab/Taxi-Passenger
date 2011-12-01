@@ -130,14 +130,6 @@ public class RequestManager {
 			Log.d(TAG, "request is null!");
 			return;
 		}
-		try {
-			request.mRequestJson.put("request_type", request.mRequestType);
-		} catch (JSONException e) {
-			Log.e(TAG, "cannot put request_type into request! "
-					+ request.mRequestType);
-			e.printStackTrace();
-			return;
-		}
 
 		request.mData = data;
 		synchronized (mRequests) {

@@ -99,7 +99,7 @@ public class TaxiOverlayItem extends MyOverlayItem {
 						+ mParam.mNickName)
 				.setPositiveButton("CallTaxi", new OnClickListener() {
 					public void onClick(DialogInterface dialog, int which) {
-						RequestProcessor.callTaxi();
+						RequestProcessor.callTaxi(mParam.mPhoneNumber);
 					}
 				}).setNegativeButton("Return", null);
 		dialog.show();
