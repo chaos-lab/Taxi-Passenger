@@ -3,9 +3,7 @@ package com.chaos.taxi;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -53,14 +51,14 @@ public class RequestProcessor {
 	public static final int REQUEST_TIMEOUT_THRESHOLD = 30000;
 
 	static final Integer CALL_TAXI_STATUS_CALLING = 0;
-	static final Integer CALL_TAXI_STATUS_REJECTED = 2;
-	static final Integer CALL_TAXI_STATUS_SUCCEED = 3;
+	static final Integer CALL_TAXI_STATUS_REJECTED = 1;
+	static final Integer CALL_TAXI_STATUS_SUCCEED = 2;
 	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 3;
 
 	static boolean mStopSendRequestThread = true;
 	static Thread mSendRequestThread = null;
 
-	static Context mContext = null;
+	static Activity mContext = null;
 
 	static Object mMapViewLock = new Object();
 	static TaxiMapView mMapView = null;
@@ -102,7 +100,8 @@ public class RequestProcessor {
 				httpParams, registry), httpParams);
 	}
 
-	public static void initRequestProcessor(Context context, TaxiMapView mapView) {
+	public static void initRequestProcessor(Activity context,
+			TaxiMapView mapView) {
 		mContext = context;
 		mMapView = mapView;
 	}
@@ -185,6 +184,12 @@ public class RequestProcessor {
 		if (httpRet == null) {
 			return;
 		}
+		if (httpRet.second == null) {
+			Log.wtf(TAG, "find taxi response str is null!");
+			Toast.makeText(mContext, "FindTaxiFail! Server Error!", 3000)
+					.show();
+			return;
+		}
 		try {
 			JSONArray taxis = httpRet.second.getJSONArray("taxis");
 			if (taxis != null) {
@@ -237,7 +242,7 @@ public class RequestProcessor {
 		}
 	}
 
-	public static void callTaxi(String taxiPhoneNumber) {
+	public static long callTaxi(String taxiPhoneNumber) {
 		long requestKey = 1;
 		synchronized (mCallTaxiLock) {
 			if (mMyTaxiParam != null) {
@@ -253,31 +258,11 @@ public class RequestProcessor {
 				requestKey = mCallTaxiRequestKey;
 			}
 		}
-		if (requestKey != -1) {
-			Intent intent = new Intent(mContext, WaitTaxiActivity.class);
-			intent.putExtra("WaitTaxiTime",
-					RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
-			intent.putExtra("RequestKey", requestKey);
-			((Activity) mContext).startActivityForResult(intent,
-					TaxiActivity.CALL_TAXI_REQUEST_CODE);
-		} else {
-			AlertDialog dialog = new AlertDialog.Builder(mContext)
-					.setIcon(android.R.drawable.ic_dialog_info)
-					.setTitle("CallTaxiFail: ")
-					.setMessage("Already have a taxi")
-					.setPositiveButton("Locate",
-							new DialogInterface.OnClickListener() {
-								public void onClick(DialogInterface dialog,
-										int which) {
-									RequestProcessor.sendLocateTaxiRequest();
-								}
-							}).setNegativeButton("OK", null).create();
-			dialog.show();
-		}
+		return requestKey;
 	}
 
-	public static void callTaxi() {
-		callTaxi(null);
+	public static long callTaxi() {
+		return callTaxi(null);
 	}
 
 	public static void showCallTaxiSucceedDialog() {
@@ -427,7 +412,7 @@ public class RequestProcessor {
 					int status = retJson.optInt("status", -1);
 					if (status == 1) {
 						// need relogin
-						// TODO: start relogin activity
+						showNeedReloginNotice();
 						return null;
 					} else if (status != 0) {
 						// TODO: other status codes
@@ -460,6 +445,10 @@ public class RequestProcessor {
 			e.printStackTrace();
 		}
 		return new Pair<Integer, JSONObject>(-1, jsonRet);
+	}
+
+	private static void showNeedReloginNotice() {
+		mContext.startActivity(new Intent(mContext, LoginNoticeActivity.class));
 	}
 
 	private static Pair<Integer, JSONObject> sendRequestToServer(Request request) {
@@ -517,7 +506,6 @@ public class RequestProcessor {
 		if (httpRet == null) {
 			return;
 		}
-		Log.d(TAG, "refresh request status is " + httpRet.first);
 		// handle the result
 		handleRefreshResponseJson(httpRet.second);
 	}
@@ -526,18 +514,6 @@ public class RequestProcessor {
 		if (jsonRet == null) {
 			return;
 		}
-		int status = -1;
-		try {
-			status = jsonRet.getInt("status");
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		if (status != 0) {
-			// TODO: add support for other status codes
-			Log.e(TAG, "handleRefreshResponseJson: status is " + status);
-			return;
-		}
-
 		JSONArray messageJsonArray = jsonRet.optJSONArray("messages");
 		if (messageJsonArray == null) {
 			Log.d(TAG, "no message in refresh response!");
@@ -633,6 +609,7 @@ public class RequestProcessor {
 						Log.wtf(TAG, "mMyTaxiParam should not be null!");
 						return;
 					}
+					Log.d(TAG, "get call taxi succeed!");
 					mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
 							CALL_TAXI_STATUS_SUCCEED);
 				}

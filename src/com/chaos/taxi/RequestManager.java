@@ -67,7 +67,6 @@ public class RequestManager {
 			return null;
 		}
 
-		JSONObject obj = new JSONObject();
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("latitude", userPoint.getLatitudeE6() / 1000000.0);

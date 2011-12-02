@@ -119,6 +119,7 @@ public class WaitTaxiActivity extends Activity {
 		mWaitTaxiTime = intent.getIntExtra("WaitTaxiTIme",
 				RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
 		mRequestKey = getIntent().getLongExtra("RequestKey", -1);
+		Log.d(TAG, "mRequestKey is " + mRequestKey);
 
 		setWaitTaxiView();
 	}
