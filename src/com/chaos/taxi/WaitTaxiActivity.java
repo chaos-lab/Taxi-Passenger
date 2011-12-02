@@ -14,9 +14,9 @@ import android.widget.TextView;
 
 public class WaitTaxiActivity extends Activity {
 	private static final String TAG = "WaitTaxiActivity";
-	static final int SUCCEED_WAIT = 0;
-	static final int CANCEL_WAIT = 1;
-	static final int REJECT_WAIT = 2;
+	static final int SUCCEED_WAIT = 1000;
+	static final int CANCEL_WAIT = 2000;
+	static final int REJECT_WAIT = 3000;
 
 	static final int SET_RESEND_VIEW = 100;
 	static final int SET_WAITTIME_TEXT = 200;
@@ -131,6 +131,7 @@ public class WaitTaxiActivity extends Activity {
 
 	Runnable mTask = new Runnable() {
 		public void run() {
+			Log.d(TAG, "enter wait taxi thread");
 			while (true) {
 				Message msg = new Message();
 				msg.what = SET_WAITTIME_TEXT;
@@ -142,7 +143,8 @@ public class WaitTaxiActivity extends Activity {
 					e.printStackTrace();
 				}
 
-				int status = RequestProcessor.popCallTaxiStatus(mRequestKey);
+				int status = RequestProcessor.getCallTaxiStatus(mRequestKey);
+				Log.d(TAG, "get status: " + status);
 				if (status == RequestProcessor.CALL_TAXI_STATUS_SUCCEED) {
 					WaitTaxiActivity.this.setResult(SUCCEED_WAIT);
 					WaitTaxiActivity.this.finish();
@@ -160,6 +162,7 @@ public class WaitTaxiActivity extends Activity {
 					break;
 				}
 			}
+			Log.d(TAG, "leave wait taxi thread");
 		}
 	};
 

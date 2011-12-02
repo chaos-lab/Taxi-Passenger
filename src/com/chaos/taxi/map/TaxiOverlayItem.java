@@ -101,7 +101,7 @@ public class TaxiOverlayItem extends MyOverlayItem {
 					public void onClick(DialogInterface dialog, int which) {
 						long requestKey = RequestProcessor
 								.callTaxi(mParam.mPhoneNumber);
-						if (requestKey == -1) {
+						if (requestKey != -1) {
 							Intent intent = new Intent(mContext,
 									WaitTaxiActivity.class);
 							intent.putExtra(

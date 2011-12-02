@@ -50,10 +50,10 @@ public class RequestProcessor {
 	static final float LOCATION_UPDATE_DISTANCE = (float) 5.0; // 5 meters
 	public static final int REQUEST_TIMEOUT_THRESHOLD = 30000;
 
-	static final Integer CALL_TAXI_STATUS_CALLING = 0;
-	static final Integer CALL_TAXI_STATUS_REJECTED = 1;
-	static final Integer CALL_TAXI_STATUS_SUCCEED = 2;
-	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 3;
+	static final Integer CALL_TAXI_STATUS_CALLING = 100;
+	static final Integer CALL_TAXI_STATUS_REJECTED = 200;
+	static final Integer CALL_TAXI_STATUS_SUCCEED = 300;
+	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 400;
 
 	static boolean mStopSendRequestThread = true;
 	static Thread mSendRequestThread = null;
@@ -164,6 +164,7 @@ public class RequestProcessor {
 			animateTo(param.mPoint);
 			synchronized (mMapViewLock) {
 				mMapView.removeAroundOverlay();
+				mMapView.removeMyTaxiOverlay();
 				mMapView.showMyTaxiOverlay(param);
 			}
 		} else {
@@ -193,6 +194,11 @@ public class RequestProcessor {
 		try {
 			JSONArray taxis = httpRet.second.getJSONArray("taxis");
 			if (taxis != null) {
+				if (taxis.length() == 0) {
+					Toast.makeText(mContext, "No nearby taxi found!", 5000)
+							.show();
+					return;
+				}
 				Log.d(TAG, "has taxis! " + taxis.length());
 				mMapView.removeAroundOverlay();
 				for (int i = 0; i < taxis.length(); ++i) {
@@ -243,10 +249,9 @@ public class RequestProcessor {
 	}
 
 	public static long callTaxi(String taxiPhoneNumber) {
-		long requestKey = 1;
 		synchronized (mCallTaxiLock) {
 			if (mMyTaxiParam != null) {
-				requestKey = -1;
+				return -1;
 			} else {
 				++mCallTaxiRequestKey;
 				mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
@@ -255,10 +260,9 @@ public class RequestProcessor {
 						mCallTaxiRequestKey, taxiPhoneNumber);
 				mCallTaxiPhoneNumberMap.put(mCallTaxiRequestKey,
 						taxiPhoneNumber);
-				requestKey = mCallTaxiRequestKey;
+				return mCallTaxiRequestKey;
 			}
 		}
-		return requestKey;
 	}
 
 	public static long callTaxi() {
@@ -290,14 +294,15 @@ public class RequestProcessor {
 		}
 	}
 
-	public static int popCallTaxiStatus(long requestKey) {
+	public static int getCallTaxiStatus(long requestKey) {
+		Log.d(TAG, "getCallTaxiStatus called: " + requestKey);
 		int status = CALL_TAXI_STATUS_CALLING;
 		synchronized (mCallTaxiLock) {
 			if (mCallTaxiRequestStatusMap.containsKey(requestKey)) {
 				status = mCallTaxiRequestStatusMap.get(requestKey);
-				mCallTaxiRequestStatusMap.remove(requestKey);
 			}
 		}
+		Log.d(TAG, "getCallTaxiStatus status is: " + status);
 		return status;
 	}
 
@@ -562,12 +567,18 @@ public class RequestProcessor {
 				Log.w(TAG, "handleTaxiLocationUpdate: do not have a taxi!");
 				return;
 			} else {
+				JSONObject locationJson = taxiLocationJson
+						.optJSONObject("location");
+				if (locationJson == null) {
+					Log.e(TAG, "location not found in location-update.");
+					return;
+				}
 				try {
-					int latitude = (int) (taxiLocationJson
-							.getDouble("latitude") * 1000000);
-					int longitude = (int) (taxiLocationJson
-							.getDouble("longitude") * 1000000);
+					int latitude = (int) (locationJson.getDouble("latitude") * 1000000);
+					int longitude = (int) (locationJson.getDouble("longitude") * 1000000);
 					mMyTaxiParam.mPoint = new GeoPoint(latitude, longitude);
+
+					sendLocateTaxiRequest();
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
@@ -588,7 +599,7 @@ public class RequestProcessor {
 			return;
 		}
 
-		int callTaxiRequestKey = callTaxiReplyJson.optInt("key", -1);
+		long callTaxiRequestKey = callTaxiReplyJson.optLong("key", -1);
 		synchronized (mCallTaxiLock) {
 			if (callTaxiRequestKey < mCallTaxiRequestKey) {
 				Log.w(TAG, "ignore call taxi response: " + callTaxiRequestKey
@@ -603,6 +614,7 @@ public class RequestProcessor {
 					Log.e(TAG, "no driver number in reply!");
 					return;
 				}
+
 				synchronized (mMapViewLock) {
 					mMyTaxiParam = mMapView.findInAroundTaxi(taxiPhoneNumber);
 					if (mMyTaxiParam == null) {

@@ -93,7 +93,7 @@ public class TaxiActivity extends MapActivity {
 		mCallTaxiBtn.setOnClickListener(new OnClickListener() {
 			public void onClick(View arg0) {
 				long requestKey = RequestProcessor.callTaxi();
-				if (requestKey == -1) {
+				if (requestKey != -1) {
 					Intent intent = new Intent(TaxiActivity.this,
 							WaitTaxiActivity.class);
 					intent.putExtra("WaitTaxiTime",
@@ -152,6 +152,7 @@ public class TaxiActivity extends MapActivity {
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == CALL_TAXI_REQUEST_CODE) {
+			Log.d(TAG, "get call taxi result: " + resultCode);
 			if (resultCode == WaitTaxiActivity.CANCEL_WAIT) {
 				RequestProcessor.cancelCallTaxiRequest();
 			} else if (resultCode == WaitTaxiActivity.SUCCEED_WAIT) {
