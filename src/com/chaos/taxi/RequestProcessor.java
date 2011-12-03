@@ -394,9 +394,7 @@ public class RequestProcessor {
 			HttpResponse httpResponse = null;
 			httpUriRequest.setHeader("Content-Type",
 					"application/x-www-form-urlencoded");
-			synchronized (mHttpClient) {
-				httpResponse = mHttpClient.execute(httpUriRequest);
-			}
+			httpResponse = mHttpClient.execute(httpUriRequest);
 			statusCode = httpResponse.getStatusLine().getStatusCode();
 			if (statusCode == 200) {
 				BufferedReader bufferedReader = new BufferedReader(
