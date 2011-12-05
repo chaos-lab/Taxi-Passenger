@@ -234,6 +234,7 @@ public class TaxiActivity extends MapActivity {
 	public void onDestroy() {
 		RequestProcessor.signout();
 		RequestProcessor.stopSendRequestThread();
+		mLocationManager.removeUpdates(locationListener);
 		super.onDestroy();
 	}
 
