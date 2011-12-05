@@ -99,37 +99,10 @@ public class TaxiOverlayItem extends MyOverlayItem {
 						+ mParam.mNickName)
 				.setPositiveButton("CallTaxi", new OnClickListener() {
 					public void onClick(DialogInterface dialog, int which) {
-						long requestKey = RequestProcessor
-								.callTaxi(mParam.mPhoneNumber);
-						if (requestKey != -1) {
-							Intent intent = new Intent(mContext,
-									WaitTaxiActivity.class);
-							intent.putExtra(
-									"WaitTaxiTime",
-									RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
-							intent.putExtra("RequestKey", requestKey);
-							((Activity) mContext)
-									.startActivityForResult(intent,
-											TaxiActivity.CALL_TAXI_REQUEST_CODE);
-						} else {
-							AlertDialog callTaxiFailDialog = new AlertDialog.Builder(
-									mContext)
-									.setIcon(android.R.drawable.ic_dialog_info)
-									.setTitle("CallTaxiFail: ")
-									.setMessage("Already have a taxi")
-									.setPositiveButton(
-											"Locate",
-											new DialogInterface.OnClickListener() {
-												public void onClick(
-														DialogInterface dialog,
-														int which) {
-													RequestProcessor
-															.sendLocateTaxiRequest();
-												}
-											}).setNegativeButton("OK", null)
-									.create();
-							callTaxiFailDialog.show();
-						}
+						RequestProcessor.setMyTaxiParam(mParam.mCarNumber,
+								mParam.mNickName, mParam.mPhoneNumber,
+								mParam.mPoint);
+						RequestProcessor.callTaxi(mParam.mPhoneNumber);
 					}
 				}).setNegativeButton("Return", null);
 		dialog.show();

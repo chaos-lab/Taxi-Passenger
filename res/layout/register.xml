@@ -1,49 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" >
+	android:layout_width="fill_parent" android:layout_height="fill_parent"
+	android:orientation="vertical">
 
-    <TextView
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/NickNameStr" />
+	<TextView android:layout_width="fill_parent"
+		android:layout_height="wrap_content" android:text="@string/NickNameStr" />
 
-    <EditText
-        android:id="@+id/reg_nick_name_et"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
+	<EditText android:id="@+id/reg_nick_name_et"
+		android:layout_width="match_parent" android:layout_height="wrap_content">
 
-        <requestFocus />
-    </EditText>
+		<requestFocus />
+	</EditText>
 
-    <TextView
-        android:id="@+id/textView1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/PhoneNumberStr" />
+	<TextView android:id="@+id/textView1" android:layout_width="wrap_content"
+		android:layout_height="wrap_content" android:text="@string/PhoneNumberStr" />
 
-    <EditText
-        android:id="@+id/reg_phone_number_et"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+	<EditText android:id="@+id/reg_phone_number_et"
+		android:layout_width="match_parent" android:layout_height="wrap_content"
+		android:numeric="integer" />
 
-    <TextView
-        android:id="@+id/textView2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/PasswordStr" />
+	<TextView android:id="@+id/textView2" android:layout_width="wrap_content"
+		android:layout_height="wrap_content" android:text="@string/PasswordStr" />
 
-    <EditText
-        android:id="@+id/reg_passwd_et"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textPassword" />
+	<EditText android:id="@+id/reg_passwd_et"
+		android:layout_width="match_parent" android:layout_height="wrap_content"
+		android:inputType="textPassword" />
 
-    <Button
-        android:id="@+id/register_btn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/RegisterStr" />
+	<Button android:id="@+id/register_btn" android:layout_width="wrap_content"
+		android:layout_height="wrap_content" android:text="@string/RegisterStr" />
 
 </LinearLayout>

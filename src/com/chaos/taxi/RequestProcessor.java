@@ -36,6 +36,9 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.location.Location;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.util.Pair;
 import android.widget.Toast;
@@ -53,10 +56,16 @@ public class RequestProcessor {
 	static final Integer CALL_TAXI_STATUS_CALLING = 100;
 	static final Integer CALL_TAXI_STATUS_REJECTED = 200;
 	static final Integer CALL_TAXI_STATUS_SUCCEED = 300;
-	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 400;
+	static final Integer CALL_TAXI_DRIVER_UNAVAILABLE = 400;
+	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 500;
 
 	static boolean mStopSendRequestThread = true;
 	static Thread mSendRequestThread = null;
+	static MyHandler mHandler = new MyHandler();
+
+	static final Integer LOCATE_TAXI = 10;
+	static final Integer REMOVE_MY_TAXI = 20;
+	static final Integer CALL_TAXI_SUCCEED = 30;
 
 	static Activity mContext = null;
 
@@ -66,8 +75,11 @@ public class RequestProcessor {
 	static Object mUserGeoPointLock = new Object();
 	static GeoPoint mUserGeoPoint = null;
 
+	static JSONObject mLoginResponse = null;
+
 	static Object mCallTaxiLock = new Object();
 	static TaxiOverlayItemParam mMyTaxiParam = null;
+	static boolean sHasTaxi = false;
 	static long mCallTaxiRequestKey = System.currentTimeMillis();
 	static HashMap<Long, Integer> mCallTaxiRequestStatusMap = new HashMap<Long, Integer>();
 	static HashMap<Long, String> mCallTaxiPhoneNumberMap = new HashMap<Long, String>();
@@ -168,7 +180,8 @@ public class RequestProcessor {
 				mMapView.showMyTaxiOverlay(param);
 			}
 		} else {
-			Toast.makeText(mContext, "Waiting for taxi locate", 4000).show();
+			Toast.makeText(mContext, "Still waiting for taxi location", 4000)
+					.show();
 		}
 	}
 
@@ -204,8 +217,8 @@ public class RequestProcessor {
 				for (int i = 0; i < taxis.length(); ++i) {
 					JSONObject taxiInfo = taxis.getJSONObject(i);
 					GeoPoint point = new GeoPoint(
-							(int) taxiInfo.getDouble("latitude") * 1000000,
-							(int) taxiInfo.getDouble("longitude") * 1000000);
+							(int) (taxiInfo.getDouble("latitude") * 1000000),
+							(int) (taxiInfo.getDouble("longitude") * 1000000));
 					String carNumber = taxiInfo.getString("car_number");
 					String phoneNumber = taxiInfo.getString("phone_number");
 					String nickName = taxiInfo.getString("nickname");
@@ -222,8 +235,13 @@ public class RequestProcessor {
 	}
 
 	public static void cancelCallTaxiRequest() {
+		Log.d(TAG, "cancelCallTaxiRequest");
 		Request request = null;
 		synchronized (mCallTaxiLock) {
+			if (sHasTaxi) {
+				Log.wtf(TAG, "sHasTaxi should not be true");
+			}
+			sHasTaxi = false;
 			mMyTaxiParam = null;
 			if (!RequestManager.removeRequest(RequestManager.CALL_TAXI_REQUEST))
 				request = RequestManager
@@ -248,10 +266,11 @@ public class RequestProcessor {
 		}
 	}
 
-	public static long callTaxi(String taxiPhoneNumber) {
+	public static void callTaxi(String taxiPhoneNumber) {
+		long requestKey = -1;
 		synchronized (mCallTaxiLock) {
-			if (mMyTaxiParam != null) {
-				return -1;
+			if (sHasTaxi) {
+				requestKey = -1;
 			} else {
 				++mCallTaxiRequestKey;
 				mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
@@ -260,17 +279,40 @@ public class RequestProcessor {
 						mCallTaxiRequestKey, taxiPhoneNumber);
 				mCallTaxiPhoneNumberMap.put(mCallTaxiRequestKey,
 						taxiPhoneNumber);
-				return mCallTaxiRequestKey;
+				requestKey = mCallTaxiRequestKey;
 			}
+		}
+
+		if (requestKey != -1) {
+			Intent intent = new Intent(mContext, WaitTaxiActivity.class);
+			intent.putExtra("WaitTaxiTime", REQUEST_TIMEOUT_THRESHOLD / 1000);
+			intent.putExtra("RequestKey", requestKey);
+			((Activity) mContext).startActivityForResult(intent,
+					TaxiActivity.CALL_TAXI_REQUEST_CODE);
+		} else {
+			AlertDialog callTaxiFailDialog = new AlertDialog.Builder(mContext)
+					.setIcon(android.R.drawable.ic_dialog_info)
+					.setTitle("CallTaxiFail: ")
+					.setMessage("Already have a taxi")
+					.setPositiveButton("Locate",
+							new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog,
+										int which) {
+									RequestProcessor.sendLocateTaxiRequest();
+								}
+							}).setNegativeButton("OK", null).create();
+			callTaxiFailDialog.show();
 		}
 	}
 
-	public static long callTaxi() {
-		return callTaxi(null);
+	public static void callTaxi() {
+		callTaxi(null);
 	}
 
 	public static void showCallTaxiSucceedDialog() {
+		Log.d(TAG, "showCallTaxiSucceedDialog");
 		synchronized (mCallTaxiLock) {
+			sHasTaxi = true;
 			if (mMyTaxiParam != null) {
 				AlertDialog dialog = new AlertDialog.Builder(mContext)
 						.setIcon(android.R.drawable.ic_dialog_info)
@@ -295,20 +337,16 @@ public class RequestProcessor {
 	}
 
 	public static int getCallTaxiStatus(long requestKey) {
-		Log.d(TAG, "getCallTaxiStatus called: " + requestKey);
 		int status = CALL_TAXI_STATUS_CALLING;
 		synchronized (mCallTaxiLock) {
 			if (mCallTaxiRequestStatusMap.containsKey(requestKey)) {
 				status = mCallTaxiRequestStatusMap.get(requestKey);
 			}
 		}
-		Log.d(TAG, "getCallTaxiStatus status is: " + status);
 		return status;
 	}
 
 	public static void signout() {
-		stopSendRequestThread();
-
 		HttpPost httpPost = new HttpPost(
 				TaxiUtil.getServerAddressByRequestType(RequestManager.SIGNOUT_REQUEST));
 		executeHttpRequest(httpPost, "Signout");
@@ -330,14 +368,14 @@ public class RequestProcessor {
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
 				"Login");
 		if (executeRet != null) {
-			startSendRequestThread();
+			mLoginResponse = executeRet.second;
 			return LOGIN_SUCCESS;
 		} else {
 			return "LOGIN_FAIL";
 		}
 	}
 
-	private static void startSendRequestThread() {
+	public static void startSendRequestThread() {
 		Log.d(TAG, "startSendRequestThread!");
 		if (mStopSendRequestThread) {
 			mStopSendRequestThread = false;
@@ -346,7 +384,7 @@ public class RequestProcessor {
 		}
 	}
 
-	private static void stopSendRequestThread() {
+	public static void stopSendRequestThread() {
 		Log.d(TAG, "stopSendRequestThread!");
 		if (!mStopSendRequestThread) {
 			mStopSendRequestThread = true;
@@ -409,7 +447,12 @@ public class RequestProcessor {
 				String str = stringBuffer.toString();
 				Log.d(TAG, requestType + " response is " + str);
 				if (str == null) {
-					return new Pair<Integer, JSONObject>(statusCode, null);
+					Log.wtf(TAG,
+							"Server result ERROR. should have response str! ");
+					Toast.makeText(mContext,
+							"Server result ERROR. should have response str! ",
+							5000).show();
+					return null;
 				} else {
 					JSONObject retJson = new JSONObject(str);
 					int status = retJson.optInt("status", -1);
@@ -418,7 +461,7 @@ public class RequestProcessor {
 						showNeedReloginNotice();
 						return null;
 					} else if (status != 0) {
-						// TODO: other status codes
+						handleServerStatusCode(requestType, status);
 						return null;
 					}
 					return new Pair<Integer, JSONObject>(statusCode,
@@ -426,8 +469,8 @@ public class RequestProcessor {
 				}
 			} else {
 				Log.w(TAG, "HttpFail. StatusCode is " + statusCode);
-				Toast.makeText(mContext, "HTTP Fail! StatusCode: ", statusCode)
-						.show();
+				Toast.makeText(mContext,
+						"HTTP Fail! StatusCode: " + statusCode, 5000).show();
 				return null;
 			}
 		} catch (ClientProtocolException e) {
@@ -441,13 +484,23 @@ public class RequestProcessor {
 			e.printStackTrace();
 		}
 
-		JSONObject jsonRet = new JSONObject();
-		try {
-			jsonRet.put("message", "Cannot conenct to server!" + exceptionMsg);
-		} catch (JSONException e) {
-			e.printStackTrace();
+		Toast.makeText(mContext, "Cannot connect to server: " + exceptionMsg,
+				5000).show();
+		return null;
+	}
+
+	private static void handleServerStatusCode(String requestType, int status) {
+		if (requestType.equals(RequestManager.CALL_TAXI_REQUEST)) {
+			switch (status) {
+			case 2:
+			case 3:
+			default:
+				// TODO
+				Log.d(TAG, "put DRIVER_UNAVAILABLE for " + mCallTaxiRequestKey);
+				mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
+						CALL_TAXI_DRIVER_UNAVAILABLE);
+			}
 		}
-		return new Pair<Integer, JSONObject>(-1, jsonRet);
 	}
 
 	private static void showNeedReloginNotice() {
@@ -468,6 +521,24 @@ public class RequestProcessor {
 		}
 
 		return executeHttpRequest(httpUriRequest, request.mRequestType);
+	}
+
+	static class MyHandler extends Handler {
+		MyHandler() {
+			super(Looper.getMainLooper());
+		}
+
+		@Override
+		public void handleMessage(Message msg) {
+			Log.d(TAG, "handleMessage: " + msg.what);
+			if (msg.what == LOCATE_TAXI) {
+				sendLocateTaxiRequest();
+			} else if (msg.what == REMOVE_MY_TAXI) {
+				synchronized (mMapViewLock) {
+					mMapView.removeMyTaxiOverlay();
+				}
+			}
+		}
 	}
 
 	static class SendRequestThread extends Thread {
@@ -535,6 +606,8 @@ public class RequestProcessor {
 					handleCallTaxiReplyJson(messageJson);
 				} else if (type.equals(RequestManager.LOCATION_UPDATE_REQUEST)) {
 					handleTaxiLocationUpdate(messageJson);
+				} else if (type.equals(RequestManager.CALL_TAXI_COMPLETE)) {
+					handleCallTaxiComplete(messageJson);
 				} else {
 					Log.e(TAG, "type is not recognized: " + type);
 				}
@@ -546,6 +619,7 @@ public class RequestProcessor {
 
 	private static void handleCallTaxiComplete(JSONObject callTaxiCompleteJson) {
 		synchronized (mCallTaxiLock) {
+			sHasTaxi = false;
 			if (mMyTaxiParam == null) {
 				Log.w(TAG, "handleCallTaxiComplete: do not have a taxi!");
 				return;
@@ -554,6 +628,11 @@ public class RequestProcessor {
 						CallTaxiCompleteActivity.class);
 				intent.putExtra("TaxiParam", mMyTaxiParam);
 				mMyTaxiParam = null;
+				synchronized (mMapViewLock) {
+					Message msg = mHandler.obtainMessage();
+					msg.what = REMOVE_MY_TAXI;
+					mHandler.sendMessage(msg);
+				}
 				mContext.startActivity(intent);
 			}
 		}
@@ -561,7 +640,7 @@ public class RequestProcessor {
 
 	private static void handleTaxiLocationUpdate(JSONObject taxiLocationJson) {
 		synchronized (mCallTaxiLock) {
-			if (mMyTaxiParam == null) {
+			if (!sHasTaxi || mMyTaxiParam == null) {
 				Log.w(TAG, "handleTaxiLocationUpdate: do not have a taxi!");
 				return;
 			} else {
@@ -576,7 +655,9 @@ public class RequestProcessor {
 					int longitude = (int) (locationJson.getDouble("longitude") * 1000000);
 					mMyTaxiParam.mPoint = new GeoPoint(latitude, longitude);
 
-					sendLocateTaxiRequest();
+					Message msg = mHandler.obtainMessage();
+					msg.what = LOCATE_TAXI;
+					mHandler.sendMessage(msg);
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
@@ -614,16 +695,28 @@ public class RequestProcessor {
 				}
 
 				synchronized (mMapViewLock) {
-					mMyTaxiParam = mMapView.findInAroundTaxi(taxiPhoneNumber);
-					if (mMyTaxiParam == null) {
+					if (mMyTaxiParam == null
+							&& ((mMyTaxiParam = mMapView
+									.findInAroundTaxi(taxiPhoneNumber)) == null)) {
 						Log.wtf(TAG, "mMyTaxiParam should not be null!");
 						return;
 					}
+					sHasTaxi = true;
 					Log.d(TAG, "get call taxi succeed!");
 					mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
 							CALL_TAXI_STATUS_SUCCEED);
 				}
 			}
+		}
+	}
+
+	public static void setMyTaxiParam(String carNumber, String nickName,
+			String phoneNumber, GeoPoint point) {
+		synchronized (mCallTaxiLock) {
+			mMyTaxiParam.mCarNumber = carNumber;
+			mMyTaxiParam.mNickName = nickName;
+			mMyTaxiParam.mPhoneNumber = phoneNumber;
+			mMyTaxiParam.mPoint = point;
 		}
 	}
 }

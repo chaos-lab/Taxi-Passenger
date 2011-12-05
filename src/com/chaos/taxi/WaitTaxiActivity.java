@@ -14,12 +14,15 @@ import android.widget.TextView;
 
 public class WaitTaxiActivity extends Activity {
 	private static final String TAG = "WaitTaxiActivity";
-	static final int SUCCEED_WAIT = 1000;
-	static final int CANCEL_WAIT = 2000;
-	static final int REJECT_WAIT = 3000;
+	static final int SUCCEED_WAIT = 1;
+	static final int CANCEL_WAIT = 2;
+	static final int REJECT_WAIT = 3;
+	static final int DRIVER_UNAVAILABLE = 4;
 
 	static final int SET_RESEND_VIEW = 100;
 	static final int SET_WAITTIME_TEXT = 200;
+
+	static final String RET_CODE = "RET_CODE";
 
 	Button waitTaxiBtn = null;
 	TextView waitTaxiTimeTv = null;
@@ -62,7 +65,9 @@ public class WaitTaxiActivity extends Activity {
 		waitTaxiTimeTv.setText("" + mWaitTaxiTime);
 		waitTaxiBtn.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				setResult(CANCEL_WAIT);
+				Intent retIntent = new Intent();
+				retIntent.putExtra(RET_CODE, CANCEL_WAIT);
+				setResult(0, retIntent);
 				WaitTaxiActivity.this.finish();
 			}
 		});
@@ -104,7 +109,9 @@ public class WaitTaxiActivity extends Activity {
 
 		cancelWaitBtn.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				setResult(CANCEL_WAIT);
+				Intent retIntent = new Intent();
+				retIntent.putExtra(RET_CODE, CANCEL_WAIT);
+				setResult(0, retIntent);
 				WaitTaxiActivity.this.finish();
 			}
 		});
@@ -133,7 +140,7 @@ public class WaitTaxiActivity extends Activity {
 		public void run() {
 			Log.d(TAG, "enter wait taxi thread");
 			while (true) {
-				Message msg = new Message();
+				Message msg = mHandler.obtainMessage();
 				msg.what = SET_WAITTIME_TEXT;
 				mHandler.sendMessage(msg);
 
@@ -144,18 +151,29 @@ public class WaitTaxiActivity extends Activity {
 				}
 
 				int status = RequestProcessor.getCallTaxiStatus(mRequestKey);
-				Log.d(TAG, "get status: " + status);
 				if (status == RequestProcessor.CALL_TAXI_STATUS_SUCCEED) {
-					WaitTaxiActivity.this.setResult(SUCCEED_WAIT);
+					Log.d(TAG, "status is CALL_TAXI_STATUS_SUCCEED!");
+					Intent retIntent = new Intent();
+					retIntent.putExtra(RET_CODE, SUCCEED_WAIT);
+					setResult(0, retIntent);
 					WaitTaxiActivity.this.finish();
 				} else if (status == RequestProcessor.CALL_TAXI_STATUS_REJECTED) {
-					setResult(REJECT_WAIT);
+					Log.d(TAG, "status is CALL_TAXI_STATUS_REJECTED!");
+					Intent retIntent = new Intent();
+					retIntent.putExtra(RET_CODE, REJECT_WAIT);
+					setResult(0, retIntent);
+					WaitTaxiActivity.this.finish();
+				} else if (status == RequestProcessor.CALL_TAXI_DRIVER_UNAVAILABLE) {
+					Log.d(TAG, "status is CALL_TAXI_DRIVER_UNAVAILABLE!");
+					Intent retIntent = new Intent();
+					retIntent.putExtra(RET_CODE, DRIVER_UNAVAILABLE);
+					setResult(0, retIntent);
 					WaitTaxiActivity.this.finish();
 				}
 
 				decreaseSetLeftWaitTaxiTime();
 				if (0 == getLeftWaitTaxiTime()) {
-					msg = new Message();
+					msg = mHandler.obtainMessage();
 					msg.what = SET_RESEND_VIEW;
 					mHandler.sendMessage(msg);
 

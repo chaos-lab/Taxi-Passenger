@@ -17,7 +17,6 @@
 
         <activity
             android:label="@string/app_name"
-            android:launchMode="singleInstance"
             android:name="TaxiActivity" >
         </activity>
         <activity android:name="LoginActivity" >

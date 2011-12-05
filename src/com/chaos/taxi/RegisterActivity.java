@@ -21,6 +21,7 @@ public class RegisterActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		RequestProcessor.initRequestProcessor(RegisterActivity.this, null);
 		setContentView(R.layout.register);
 
 		mRegisterButton = (Button) findViewById(R.id.register_btn);

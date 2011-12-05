@@ -195,11 +195,10 @@ public class TaxiMapView extends MapView {
 	 */
 
 	private void handleLongPress(GeoPoint lastPixPoint) {
-		Log.d(TAG, "handle long press here!");
+		// Log.d(TAG, "handle long press here!");
 	}
 
 	private void handleDoubleClick(Point lastPixPoint) {
-		Log.d(TAG, "handle double click here!");
 		if (lastPixPoint == null) {
 			Log.w(TAG, "lastPixPoint is null!");
 			return;
@@ -219,7 +218,6 @@ public class TaxiMapView extends MapView {
 
 	private void handleMapPress(final MotionEvent event) {
 		if (event.getAction() == MotionEvent.ACTION_DOWN) {
-			Log.d(TAG, "ACTION_DOWN");
 			long currentTime = System.currentTimeMillis();
 			if (currentTime - mLastClickTime <= DOUBLECLICK_THRESHOLD) {
 				handleDoubleClick(mLastClickPixPoint);
@@ -243,23 +241,20 @@ public class TaxiMapView extends MapView {
 
 			mLastMapCenter = getMapCenter();
 		} else if (event.getAction() == MotionEvent.ACTION_MOVE) {
-			Log.d(TAG, "ACTION_MOVE");
 			if (!getMapCenter().equals(mLastMapCenter)) {
 				mLongpressTimer.cancel();
 			}
 			mLastMapCenter = getMapCenter();
 		} else if (event.getAction() == MotionEvent.ACTION_UP) {
-			Log.d(TAG, "ACTION_UP");
 			mLongpressTimer.cancel();
 		}
 	}
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		Log.d(TAG, "onTouchEvent");
 		GeoPoint point = getProjection().fromPixels((int) event.getX(),
 				(int) event.getY());
-		Log.d(TAG, point.getLatitudeE6() + " " + point.getLongitudeE6());
+		// Log.d(TAG, point.getLatitudeE6() + " " + point.getLongitudeE6());
 		handleMapPress(event);
 		if (mTaxiItemizedOverlay.size() > 0) {
 			return super.onTouchEvent(event);
