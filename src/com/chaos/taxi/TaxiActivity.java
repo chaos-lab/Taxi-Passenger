@@ -236,12 +236,12 @@ public class TaxiActivity extends MapActivity {
 			GeoPoint point = null;
 			JSONObject locationJson = driverJson.optJSONObject("location");
 			if (locationJson != null) {
-				int latitude = (int) (driverJson.optDouble("latitude", -1) * 1000000);
-				int longitude = (int) (driverJson.optDouble("longitude", -1) * 1000000);
+				int latitude = (int) (locationJson.optDouble("latitude", -1) * 1000000);
+				int longitude = (int) (locationJson.optDouble("longitude", -1) * 1000000);
 				if (latitude >= 0 && longitude >= 0) {
 					point = new GeoPoint(latitude, longitude);
 				}
-			}
+			} 
 
 			RequestProcessor.setMyTaxiParam(carNumber, nickName, phoneNumber,
 					point);

@@ -55,7 +55,7 @@ public class RequestProcessor {
 	static final Integer CALL_TAXI_STATUS_CALLING = 100;
 	static final Integer CALL_TAXI_STATUS_REJECTED = 200;
 	static final Integer CALL_TAXI_STATUS_SUCCEED = 300;
-	static final Integer CALL_TAXI_DRIVER_UNAVAILABLE = 400;
+	static final Integer CALL_TAXI_STATUS_DRIVER_UNAVAILABLE = 400;
 	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 500;
 	static final Integer CALL_TAXI_STATUS_CANCELED = 600;
 
@@ -475,7 +475,11 @@ public class RequestProcessor {
 							"Server result ERROR. should have response str! ");
 					showToastText("Server result ERROR. should have response str! ");
 					if (requestType == RequestManager.CALL_TAXI_REQUEST) {
-						mCallTaxiFailMessage = "Server result ERROR. should have response str! ";
+						synchronized (mCallTaxiLock) {
+							mCallTaxiFailMessage = "Server result ERROR. should have response str! ";
+							mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
+									CALL_TAXI_STATUS_SERVER_ERROR);
+						}
 					}
 					return null;
 				} else {
@@ -483,7 +487,12 @@ public class RequestProcessor {
 					int status = retJson.optInt("status", -1);
 					if (status == 1) {
 						if (requestType == RequestManager.CALL_TAXI_REQUEST) {
-							mCallTaxiFailMessage = "Login Session Timeout!";
+							synchronized (mCallTaxiLock) {
+								mCallTaxiFailMessage = "Login Session Timeout!";
+								mCallTaxiRequestStatusMap.put(
+										mCallTaxiRequestKey,
+										CALL_TAXI_STATUS_SERVER_ERROR);
+							}
 						}
 						// need relogin
 						if (requestType != RequestManager.REFRESH_REQUEST) {
@@ -499,10 +508,16 @@ public class RequestProcessor {
 				}
 			} else {
 				Log.w(TAG, "HttpFail. StatusCode is " + statusCode);
-				showToastText("HTTP Fail! StatusCode: " + statusCode);
+				if (requestType != RequestManager.REFRESH_REQUEST) {
+					showToastText("HTTP Fail! StatusCode: " + statusCode);
+				}
 				if (requestType == RequestManager.CALL_TAXI_REQUEST) {
-					mCallTaxiFailMessage = "HTTP Fail! StatusCode: "
-							+ statusCode;
+					synchronized (mCallTaxiLock) {
+						mCallTaxiFailMessage = "HTTP Fail! StatusCode: "
+								+ statusCode;
+						mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
+								CALL_TAXI_STATUS_SERVER_ERROR);
+					}
 				}
 				return null;
 			}
@@ -529,9 +544,11 @@ public class RequestProcessor {
 			default:
 				// TODO
 				Log.d(TAG, "put DRIVER_UNAVAILABLE for " + mCallTaxiRequestKey);
-				mCallTaxiFailMessage = "Driver Unavailable!";
-				mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
-						CALL_TAXI_DRIVER_UNAVAILABLE);
+				synchronized (mCallTaxiLock) {
+					mCallTaxiFailMessage = "Driver Unavailable!";
+					mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
+							CALL_TAXI_STATUS_DRIVER_UNAVAILABLE);
+				}
 			}
 		}
 	}

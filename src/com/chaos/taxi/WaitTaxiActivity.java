@@ -136,6 +136,7 @@ public class WaitTaxiActivity extends Activity {
 
 	@Override
 	public void onDestroy() {
+		Log.d(TAG, "onDestroy");
 		super.onDestroy();
 	}
 
@@ -166,7 +167,7 @@ public class WaitTaxiActivity extends Activity {
 					retIntent.putExtra(RET_CODE, REJECT_WAIT);
 					setResult(0, retIntent);
 					WaitTaxiActivity.this.finish();
-				} else if (status == RequestProcessor.CALL_TAXI_DRIVER_UNAVAILABLE) {
+				} else if (status == RequestProcessor.CALL_TAXI_STATUS_DRIVER_UNAVAILABLE) {
 					Log.d(TAG, "status is CALL_TAXI_DRIVER_UNAVAILABLE!");
 					Intent retIntent = new Intent();
 					retIntent.putExtra(RET_CODE, DRIVER_UNAVAILABLE);

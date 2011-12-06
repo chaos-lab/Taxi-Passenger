@@ -67,21 +67,22 @@ public class LoginActivity extends Activity {
 
 				new Thread(new Runnable() {
 					public void run() {
-						mHandler.sendEmptyMessage(SHOW_PROGRESS_DIALOG);
-
 						String phoneNumber = phoneNumber_et.getText()
 								.toString();
 						String password = password_et.getText().toString();
 						Log.d(TAG, "phoneNumber is " + phoneNumber
 								+ " password is " + password);
 						if (phoneNumber == null || phoneNumber.equals("")) {
-							Toast.makeText(LoginActivity.this,
-									"Should input the PhoneNumber", 4000)
-									.show();
+							mHandler.sendMessage(mHandler.obtainMessage(
+									SHOW_TOAST_TEXT,
+									"Should input the PhoneNumber"));
 						} else if (password == null || password.equals("")) {
-							Toast.makeText(LoginActivity.this,
-									"Should input the Password", 4000).show();
+							mHandler.sendMessage(mHandler.obtainMessage(
+									SHOW_TOAST_TEXT,
+									"Should input the Password"));
 						} else {
+							mHandler.sendEmptyMessage(SHOW_PROGRESS_DIALOG);
+
 							String msg = RequestProcessor.login(phoneNumber,
 									password);
 							if (msg.equals(RequestProcessor.LOGIN_SUCCESS)) {
