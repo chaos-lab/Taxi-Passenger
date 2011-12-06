@@ -232,9 +232,10 @@ public class TaxiActivity extends MapActivity {
 
 	@Override
 	public void onDestroy() {
-		RequestProcessor.signout();
-		RequestProcessor.stopSendRequestThread();
+		sStarted = false;
 		mLocationManager.removeUpdates(locationListener);
+		RequestProcessor.stopSendRequestThread();
+		RequestProcessor.signout();
 		super.onDestroy();
 	}
 
