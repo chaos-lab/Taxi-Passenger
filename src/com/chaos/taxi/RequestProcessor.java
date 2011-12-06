@@ -31,7 +31,6 @@ import com.google.android.maps.GeoPoint;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
@@ -58,6 +57,7 @@ public class RequestProcessor {
 	static final Integer CALL_TAXI_STATUS_SUCCEED = 300;
 	static final Integer CALL_TAXI_DRIVER_UNAVAILABLE = 400;
 	static final Integer CALL_TAXI_STATUS_SERVER_ERROR = 500;
+	static final Integer CALL_TAXI_STATUS_CANCELED = 600;
 
 	static boolean mStopSendRequestThread = true;
 	static Thread mSendRequestThread = null;
@@ -66,6 +66,7 @@ public class RequestProcessor {
 	static final Integer LOCATE_TAXI = 10;
 	static final Integer REMOVE_MY_TAXI = 20;
 	static final Integer CALL_TAXI_SUCCEED = 30;
+	static final Integer SHOW_TOAST_TEXT = 40;
 
 	static Activity mContext = null;
 
@@ -76,6 +77,7 @@ public class RequestProcessor {
 	static GeoPoint mUserGeoPoint = null;
 
 	static JSONObject mLoginResponse = null;
+	static String mCallTaxiFailMessage = null;
 
 	static Object mCallTaxiLock = new Object();
 	static TaxiOverlayItemParam mMyTaxiParam = null;
@@ -110,6 +112,26 @@ public class RequestProcessor {
 
 		mHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager(
 				httpParams, registry), httpParams);
+	}
+
+	static class MyHandler extends Handler {
+		MyHandler() {
+			super(Looper.getMainLooper());
+		}
+
+		@Override
+		public void handleMessage(Message msg) {
+			Log.d(TAG, "handleMessage: " + msg.what);
+			if (msg.what == LOCATE_TAXI) {
+				sendLocateTaxiRequest();
+			} else if (msg.what == REMOVE_MY_TAXI) {
+				synchronized (mMapViewLock) {
+					mMapView.removeMyTaxiOverlay();
+				}
+			} else if (msg.what == SHOW_TOAST_TEXT) {
+				Toast.makeText(mContext, (CharSequence) msg.obj, 4000).show();
+			}
+		}
 	}
 
 	public static void initRequestProcessor(Activity context,
@@ -165,7 +187,7 @@ public class RequestProcessor {
 				mMapView.showUserOverlay(new UserOverlayItemParam(point));
 			}
 		} else {
-			Toast.makeText(mContext, "Waiting for locate", 4000).show();
+			showToastText("Waiting for locate...");
 		}
 	}
 
@@ -180,8 +202,7 @@ public class RequestProcessor {
 				mMapView.showMyTaxiOverlay(param);
 			}
 		} else {
-			Toast.makeText(mContext, "Still waiting for taxi location", 4000)
-					.show();
+			showToastText("Still waiting for taxi location");
 		}
 	}
 
@@ -189,8 +210,7 @@ public class RequestProcessor {
 		GeoPoint userPoint = getUserGeoPoint();
 		if (userPoint == null) {
 			Log.d(TAG, "sendFindTaxiRequest: no user location!");
-			Toast.makeText(mContext, "Still waiting for locate...", 4000)
-					.show();
+			showToastText("Still waiting for locate...");
 			return;
 		}
 		Pair<Integer, JSONObject> httpRet = sendRequestToServer(RequestManager
@@ -200,16 +220,14 @@ public class RequestProcessor {
 		}
 		if (httpRet.second == null) {
 			Log.wtf(TAG, "find taxi response str is null!");
-			Toast.makeText(mContext, "FindTaxiFail! Server Error!", 3000)
-					.show();
+			showToastText("FindTaxiFail! Server Response Error!");
 			return;
 		}
 		try {
 			JSONArray taxis = httpRet.second.getJSONArray("taxis");
 			if (taxis != null) {
 				if (taxis.length() == 0) {
-					Toast.makeText(mContext, "No nearby taxi found!", 5000)
-							.show();
+					showToastText("No nearby taxi found!");
 					return;
 				}
 				Log.d(TAG, "has taxis! " + taxis.length());
@@ -267,6 +285,7 @@ public class RequestProcessor {
 	}
 
 	public static void callTaxi(String taxiPhoneNumber) {
+		RequestProcessor.mCallTaxiFailMessage = null;
 		long requestKey = -1;
 		synchronized (mCallTaxiLock) {
 			if (sHasTaxi) {
@@ -287,6 +306,7 @@ public class RequestProcessor {
 			Intent intent = new Intent(mContext, WaitTaxiActivity.class);
 			intent.putExtra("WaitTaxiTime", REQUEST_TIMEOUT_THRESHOLD / 1000);
 			intent.putExtra("RequestKey", requestKey);
+			intent.putExtra("TaxiPhoneNumber", taxiPhoneNumber);
 			((Activity) mContext).startActivityForResult(intent,
 					TaxiActivity.CALL_TAXI_REQUEST_CODE);
 		} else {
@@ -339,6 +359,9 @@ public class RequestProcessor {
 	public static int getCallTaxiStatus(long requestKey) {
 		int status = CALL_TAXI_STATUS_CALLING;
 		synchronized (mCallTaxiLock) {
+			if (requestKey < mCallTaxiRequestKey) {
+				return RequestProcessor.CALL_TAXI_STATUS_CANCELED;
+			}
 			if (mCallTaxiRequestStatusMap.containsKey(requestKey)) {
 				status = mCallTaxiRequestStatusMap.get(requestKey);
 			}
@@ -349,7 +372,7 @@ public class RequestProcessor {
 	public static void signout() {
 		HttpPost httpPost = new HttpPost(
 				TaxiUtil.getServerAddressByRequestType(RequestManager.SIGNOUT_REQUEST));
-		executeHttpRequest(httpPost, "Signout");
+		executeHttpRequest(httpPost, "Signout", null);
 	}
 
 	public static String login(String phoneNumber, String password) {
@@ -366,7 +389,7 @@ public class RequestProcessor {
 		TaxiUtil.setHttpEntity(httpPost, signinJson.toString());
 
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
-				"Login");
+				"Login", null);
 		if (executeRet != null) {
 			mLoginResponse = executeRet.second;
 			return LOGIN_SUCCESS;
@@ -415,7 +438,7 @@ public class RequestProcessor {
 		TaxiUtil.setHttpEntity(httpPost, registerJson.toString());
 
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
-				"Register");
+				"Register", null);
 		if (executeRet != null) {
 			return REGISTER_SUCCESS;
 		} else {
@@ -424,8 +447,9 @@ public class RequestProcessor {
 	}
 
 	private static Pair<Integer, JSONObject> executeHttpRequest(
-			HttpUriRequest httpUriRequest, String requestType) {
+			HttpUriRequest httpUriRequest, String requestType, Request request) {
 		Integer statusCode = 0;
+		String responseStr = null;
 		String exceptionMsg = null;
 
 		try {
@@ -444,33 +468,42 @@ public class RequestProcessor {
 					stringBuffer.append(line);
 				}
 
-				String str = stringBuffer.toString();
-				Log.d(TAG, requestType + " response is " + str);
-				if (str == null) {
+				responseStr = stringBuffer.toString();
+				Log.d(TAG, requestType + " response is " + responseStr);
+				if (responseStr == null) {
 					Log.wtf(TAG,
 							"Server result ERROR. should have response str! ");
-					Toast.makeText(mContext,
-							"Server result ERROR. should have response str! ",
-							5000).show();
+					showToastText("Server result ERROR. should have response str! ");
+					if (requestType == RequestManager.CALL_TAXI_REQUEST) {
+						mCallTaxiFailMessage = "Server result ERROR. should have response str! ";
+					}
 					return null;
 				} else {
-					JSONObject retJson = new JSONObject(str);
+					JSONObject retJson = new JSONObject(responseStr);
 					int status = retJson.optInt("status", -1);
 					if (status == 1) {
+						if (requestType == RequestManager.CALL_TAXI_REQUEST) {
+							mCallTaxiFailMessage = "Login Session Timeout!";
+						}
 						// need relogin
-						showNeedReloginNotice();
+						if (requestType != RequestManager.REFRESH_REQUEST) {
+							showNeedReloginNotice();
+						}
 						return null;
 					} else if (status != 0) {
 						handleServerStatusCode(requestType, status);
 						return null;
 					}
 					return new Pair<Integer, JSONObject>(statusCode,
-							new JSONObject(str));
+							new JSONObject(responseStr));
 				}
 			} else {
 				Log.w(TAG, "HttpFail. StatusCode is " + statusCode);
-				Toast.makeText(mContext,
-						"HTTP Fail! StatusCode: " + statusCode, 5000).show();
+				showToastText("HTTP Fail! StatusCode: " + statusCode);
+				if (requestType == RequestManager.CALL_TAXI_REQUEST) {
+					mCallTaxiFailMessage = "HTTP Fail! StatusCode: "
+							+ statusCode;
+				}
 				return null;
 			}
 		} catch (ClientProtocolException e) {
@@ -484,8 +517,7 @@ public class RequestProcessor {
 			e.printStackTrace();
 		}
 
-		Toast.makeText(mContext, "Cannot connect to server: " + exceptionMsg,
-				5000).show();
+		showToastText("Cannot connect to server: " + exceptionMsg);
 		return null;
 	}
 
@@ -497,6 +529,7 @@ public class RequestProcessor {
 			default:
 				// TODO
 				Log.d(TAG, "put DRIVER_UNAVAILABLE for " + mCallTaxiRequestKey);
+				mCallTaxiFailMessage = "Driver Unavailable!";
 				mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
 						CALL_TAXI_DRIVER_UNAVAILABLE);
 			}
@@ -520,25 +553,11 @@ public class RequestProcessor {
 			return null;
 		}
 
-		return executeHttpRequest(httpUriRequest, request.mRequestType);
+		return executeHttpRequest(httpUriRequest, request.mRequestType, request);
 	}
 
-	static class MyHandler extends Handler {
-		MyHandler() {
-			super(Looper.getMainLooper());
-		}
-
-		@Override
-		public void handleMessage(Message msg) {
-			Log.d(TAG, "handleMessage: " + msg.what);
-			if (msg.what == LOCATE_TAXI) {
-				sendLocateTaxiRequest();
-			} else if (msg.what == REMOVE_MY_TAXI) {
-				synchronized (mMapViewLock) {
-					mMapView.removeMyTaxiOverlay();
-				}
-			}
-		}
+	private static void showToastText(String text) {
+		mHandler.sendMessage(mHandler.obtainMessage(SHOW_TOAST_TEXT, text));
 	}
 
 	static class SendRequestThread extends Thread {
@@ -568,7 +587,16 @@ public class RequestProcessor {
 					continue;
 				}
 
-				sendRequestToServer(request);
+				if (sendRequestToServer(request) == null) {
+					if (request.mRequestType
+							.equals(RequestManager.CALL_TAXI_REQUEST)) {
+						long requestKey = request.mRequestJson.optInt("key");
+						synchronized (mMapViewLock) {
+							mCallTaxiRequestStatusMap.put(requestKey,
+									CALL_TAXI_STATUS_SERVER_ERROR);
+						}
+					}
+				}
 			}
 		}
 	};
@@ -713,10 +741,8 @@ public class RequestProcessor {
 	public static void setMyTaxiParam(String carNumber, String nickName,
 			String phoneNumber, GeoPoint point) {
 		synchronized (mCallTaxiLock) {
-			mMyTaxiParam.mCarNumber = carNumber;
-			mMyTaxiParam.mNickName = nickName;
-			mMyTaxiParam.mPhoneNumber = phoneNumber;
-			mMyTaxiParam.mPoint = point;
+			mMyTaxiParam = new TaxiOverlayItemParam(point, carNumber, nickName,
+					phoneNumber);
 		}
 	}
 }

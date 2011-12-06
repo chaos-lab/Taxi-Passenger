@@ -21,6 +21,7 @@ public class LoginActivity extends Activity {
 	static final int REGISTER_REQUEST_CODE = 111111;
 	static final int SHOW_PROGRESS_DIALOG = 100;
 	static final int DISMISS_PROGRESS_DIALOG = 200;
+	static final int SHOW_TOAST_TEXT = 300;
 
 	ProgressDialog mProgressDialog = null;
 
@@ -42,6 +43,9 @@ public class LoginActivity extends Activity {
 				if (mProgressDialog != null)
 					mProgressDialog.dismiss();
 				break;
+			case SHOW_TOAST_TEXT:
+				Toast.makeText(LoginActivity.this, (CharSequence) msg.obj, 4000)
+						.show();
 			}
 		}
 	};
@@ -90,8 +94,8 @@ public class LoginActivity extends Activity {
 								mHandler.sendEmptyMessage(DISMISS_PROGRESS_DIALOG);
 								LoginActivity.this.finish();
 							} else {
-								Toast.makeText(LoginActivity.this,
-										"Login Fail: " + msg, 5000).show();
+								mHandler.sendMessage(mHandler.obtainMessage(
+										SHOW_TOAST_TEXT, "Login Fail: " + msg));
 								mHandler.sendEmptyMessage(DISMISS_PROGRESS_DIALOG);
 							}
 						}

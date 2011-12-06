@@ -85,7 +85,7 @@ public class RequestManager {
 				+ callTaxiRequestKey + " taxiPhoneNumber: " + taxiPhoneNumber);
 		JSONObject jsonObj = new JSONObject();
 		try {
-			jsonObj.put("type", CALL_TAXI_REQUEST);
+			//jsonObj.put("type", CALL_TAXI_REQUEST);
 			jsonObj.put("key", callTaxiRequestKey);
 			if (taxiPhoneNumber != null) {
 				jsonObj.put("driver", taxiPhoneNumber);
@@ -113,7 +113,7 @@ public class RequestManager {
 	public static Request generateCancelCallTaxiRequest(long callTaxiRequestKey) {
 		JSONObject jsonObj = new JSONObject();
 		try {
-			jsonObj.put("type", CANCEL_CALL_TAXI_REQUEST);
+			//jsonObj.put("type", CANCEL_CALL_TAXI_REQUEST);
 			jsonObj.put("key", callTaxiRequestKey);
 		} catch (JSONException e) {
 			e.printStackTrace();

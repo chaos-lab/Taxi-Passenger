@@ -18,6 +18,7 @@ public class WaitTaxiActivity extends Activity {
 	static final int CANCEL_WAIT = 2;
 	static final int REJECT_WAIT = 3;
 	static final int DRIVER_UNAVAILABLE = 4;
+	static final int SERVER_ERROR = 5;
 
 	static final int SET_RESEND_VIEW = 100;
 	static final int SET_WAITTIME_TEXT = 200;
@@ -33,6 +34,7 @@ public class WaitTaxiActivity extends Activity {
 
 	int mWaitTaxiTime = 0;
 	Integer mLeftWaitTaxiTime = 0;
+	String mTaxiPhoneNumber = null;
 
 	// Thread mSetWaitTimeThread = null;
 
@@ -125,8 +127,9 @@ public class WaitTaxiActivity extends Activity {
 		Intent intent = getIntent();
 		mWaitTaxiTime = intent.getIntExtra("WaitTaxiTIme",
 				RequestProcessor.REQUEST_TIMEOUT_THRESHOLD / 1000);
-		mRequestKey = getIntent().getLongExtra("RequestKey", -1);
+		mRequestKey = intent.getLongExtra("RequestKey", -1);
 		Log.d(TAG, "mRequestKey is " + mRequestKey);
+		mTaxiPhoneNumber = intent.getStringExtra("TaxiPhoneNumber");
 
 		setWaitTaxiView();
 	}
@@ -167,6 +170,19 @@ public class WaitTaxiActivity extends Activity {
 					Log.d(TAG, "status is CALL_TAXI_DRIVER_UNAVAILABLE!");
 					Intent retIntent = new Intent();
 					retIntent.putExtra(RET_CODE, DRIVER_UNAVAILABLE);
+					setResult(0, retIntent);
+					WaitTaxiActivity.this.finish();
+				} else if (status == RequestProcessor.CALL_TAXI_STATUS_SERVER_ERROR) {
+					Log.d(TAG, "status is CALL_TAXI_STATUS_SERVER_ERROR!");
+					Intent retIntent = new Intent();
+					retIntent.putExtra(RET_CODE, SERVER_ERROR);
+					retIntent.putExtra("TaxiPhoneNumber", mTaxiPhoneNumber);
+					setResult(0, retIntent);
+					WaitTaxiActivity.this.finish();
+				} else if (status == RequestProcessor.CALL_TAXI_STATUS_CANCELED) {
+					Log.d(TAG, "status is CALL_TAXI_STATUS_CANCELED!");
+					Intent retIntent = new Intent();
+					retIntent.putExtra(RET_CODE, CANCEL_WAIT);
 					setResult(0, retIntent);
 					WaitTaxiActivity.this.finish();
 				}

@@ -157,6 +157,23 @@ public class TaxiActivity extends MapActivity {
 						.setMessage("Cannot contact the Driver!")
 						.setNegativeButton("OK", null).create();
 				dialog.show();
+			} else if (retCode == WaitTaxiActivity.SERVER_ERROR) {
+				final String taxiPhoneNumber = data
+						.getStringExtra("TaxiPhoneNumber");
+
+				AlertDialog dialog = new AlertDialog.Builder(TaxiActivity.this)
+						.setIcon(android.R.drawable.ic_dialog_info)
+						.setTitle("CallTaxiFail: ")
+						.setMessage(RequestProcessor.mCallTaxiFailMessage)
+						.setPositiveButton("Resend-CallTaxi",
+								new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog,
+											int which) {
+										RequestProcessor
+												.callTaxi(taxiPhoneNumber);
+									}
+								}).setNegativeButton("OK", null).create();
+				dialog.show();
 			} else {
 				Log.e(TAG, "unrecognized retCode: " + retCode);
 			}
@@ -190,7 +207,13 @@ public class TaxiActivity extends MapActivity {
 		Log.d(TAG,
 				"mLoginResponse is "
 						+ RequestProcessor.mLoginResponse.toString());
-		int state = RequestProcessor.mLoginResponse.optInt("state", -1);
+		JSONObject selfPartJson = RequestProcessor.mLoginResponse
+				.optJSONObject("self");
+		if (selfPartJson == null) {
+			Log.e(TAG, "self part in LoginResponse should not be null!");
+			return;
+		}
+		int state = selfPartJson.optInt("state", -1);
 		if (state == -1) {
 			Log.w(TAG, "the login response should contain a state!");
 			return;
@@ -199,8 +222,7 @@ public class TaxiActivity extends MapActivity {
 			return;
 		}
 
-		JSONObject driverJson = RequestProcessor.mLoginResponse
-				.optJSONObject("driver");
+		JSONObject driverJson = selfPartJson.optJSONObject("driver");
 		if (driverJson == null) {
 			Log.e(TAG, "driverJson should not be null!");
 			return;
@@ -210,19 +232,24 @@ public class TaxiActivity extends MapActivity {
 			String carNumber = driverJson.getString("car_number");
 			String nickName = driverJson.getString("nickname");
 			String phoneNumber = driverJson.getString("phone_number");
-			int latitude = (int) (driverJson.optDouble("latitude", -1) * 1000000);
-			int longitude = (int) (driverJson.optDouble("longitude", -1) * 1000000);
 
 			GeoPoint point = null;
-			if (latitude >= 0 && longitude >= 0) {
-				point = new GeoPoint(latitude, longitude);
+			JSONObject locationJson = driverJson.optJSONObject("location");
+			if (locationJson != null) {
+				int latitude = (int) (driverJson.optDouble("latitude", -1) * 1000000);
+				int longitude = (int) (driverJson.optDouble("longitude", -1) * 1000000);
+				if (latitude >= 0 && longitude >= 0) {
+					point = new GeoPoint(latitude, longitude);
+				}
 			}
 
 			RequestProcessor.setMyTaxiParam(carNumber, nickName, phoneNumber,
 					point);
 			if (state == 1) { // calling taxi
+				Log.d(TAG, "state is 1, callTaxi");
 				RequestProcessor.callTaxi(phoneNumber);
 			} else if (state == 2) { // already has a taxi
+				Log.d(TAG, "state is 2, showTaxi");
 				RequestProcessor.showCallTaxiSucceedDialog();
 			}
 		} catch (JSONException e) {
