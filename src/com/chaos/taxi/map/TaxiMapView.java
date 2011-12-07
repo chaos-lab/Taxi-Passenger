@@ -87,8 +87,8 @@ public class TaxiMapView extends MapView {
 				+ param.mPoint.getLongitudeE6());
 		getController().animateTo(param.mPoint);
 		mTaxiOverlayItem = new TaxiOverlayItem(mContext, param, true);
-		// mTaxiOverlayItem.setMarker(mContext.getResources().getDrawable(
-		// R.drawable.my_car));
+		mTaxiOverlayItem.setMarker(mContext.getResources().getDrawable(
+				R.drawable.my_car));
 		mTaxiItemizedOverlay.addOverlayItem(mTaxiOverlayItem);
 		invalidate();
 	}
@@ -113,8 +113,8 @@ public class TaxiMapView extends MapView {
 			mTaxiItemizedOverlay.removeOverlayItem(mUserOverlayItem);
 		}
 		mUserOverlayItem = new UserOverlayItem(mContext, param);
-		// mUserOverlayItem.setMarker(mContext.getResources().getDrawable(
-		// R.drawable.my_location));
+		mUserOverlayItem.setMarker(mContext.getResources().getDrawable(
+				R.drawable.my_location));
 		mTaxiItemizedOverlay.addOverlayItem(mUserOverlayItem);
 		getController().animateTo(param.mPoint);
 		invalidate();
@@ -144,8 +144,8 @@ public class TaxiMapView extends MapView {
 			return;
 		}
 		mAroundTaxiOverlayItem.add(item);
-		// mUserOverlayItem.setMarker(mContext.getResources().getDrawable(
-		// R.drawable.car));
+		mUserOverlayItem.setMarker(mContext.getResources().getDrawable(
+				R.drawable.car));
 		mTaxiItemizedOverlay.addOverlayItem(item);
 		invalidate();
 	}

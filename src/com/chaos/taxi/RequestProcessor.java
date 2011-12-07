@@ -762,4 +762,10 @@ public class RequestProcessor {
 					phoneNumber);
 		}
 	}
+
+	public static boolean hasTaxi() {
+		synchronized (mCallTaxiLock) {
+			return sHasTaxi;
+		}
+	}
 }

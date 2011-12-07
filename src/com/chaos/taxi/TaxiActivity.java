@@ -16,6 +16,8 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -241,7 +243,7 @@ public class TaxiActivity extends MapActivity {
 				if (latitude >= 0 && longitude >= 0) {
 					point = new GeoPoint(latitude, longitude);
 				}
-			} 
+			}
 
 			RequestProcessor.setMyTaxiParam(carNumber, nickName, phoneNumber,
 					point);
@@ -269,5 +271,16 @@ public class TaxiActivity extends MapActivity {
 	@Override
 	protected boolean isRouteDisplayed() {
 		return false;
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		menu.add(0, 0, 0, "History").setIcon(R.drawable.ic_launcher);
+		return super.onCreateOptionsMenu(menu);
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		return super.onOptionsItemSelected(item);
 	}
 }

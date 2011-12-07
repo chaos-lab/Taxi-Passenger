@@ -93,18 +93,20 @@ public class TaxiOverlayItem extends MyOverlayItem {
 		Log.d(TAG, "onTap");
 		AlertDialog.Builder dialog = new AlertDialog.Builder(mContext);
 		dialog.setTitle("Taxi");
-		dialog.setMessage(
-				"CarNumber is " + mParam.mCarNumber + "\nPhoneNumber is "
-						+ mParam.mPhoneNumber + "\nNickName is "
-						+ mParam.mNickName)
-				.setPositiveButton("CallTaxi", new OnClickListener() {
-					public void onClick(DialogInterface dialog, int which) {
-						RequestProcessor.setMyTaxiParam(mParam.mCarNumber,
-								mParam.mNickName, mParam.mPhoneNumber,
-								mParam.mPoint);
-						RequestProcessor.callTaxi(mParam.mPhoneNumber);
-					}
-				}).setNegativeButton("Return", null);
+		dialog.setMessage("CarNumber is " + mParam.mCarNumber
+				+ "\nPhoneNumber is " + mParam.mPhoneNumber + "\nNickName is "
+				+ mParam.mNickName);
+		if (!RequestProcessor.hasTaxi()) {
+			dialog.setPositiveButton("CallTaxi", new OnClickListener() {
+				public void onClick(DialogInterface dialog, int which) {
+					RequestProcessor.setMyTaxiParam(mParam.mCarNumber,
+							mParam.mNickName, mParam.mPhoneNumber,
+							mParam.mPoint);
+					RequestProcessor.callTaxi(mParam.mPhoneNumber);
+				}
+			});
+		}
+		dialog.setNegativeButton("Return", null);
 		dialog.show();
 	}
 }

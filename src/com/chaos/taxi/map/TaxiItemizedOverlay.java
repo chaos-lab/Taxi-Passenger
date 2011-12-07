@@ -11,7 +11,7 @@ import com.google.android.maps.OverlayItem;
 
 public class TaxiItemizedOverlay extends ItemizedOverlay<OverlayItem> {
 	private static final String TAG = "TaxiItemizedOverlay";
-	//private Context mContext = null;
+	// private Context mContext = null;
 	private ArrayList<MyOverlayItem> mOverlayItems = new ArrayList<MyOverlayItem>();
 
 	public TaxiItemizedOverlay(Drawable defaultMarker) {
@@ -20,7 +20,7 @@ public class TaxiItemizedOverlay extends ItemizedOverlay<OverlayItem> {
 
 	public TaxiItemizedOverlay(Drawable defaultMarker, Context context) {
 		this(defaultMarker);
-		//mContext = context;
+		// mContext = context;
 	}
 
 	@Override
@@ -34,6 +34,9 @@ public class TaxiItemizedOverlay extends ItemizedOverlay<OverlayItem> {
 	}
 
 	public void addOverlayItem(MyOverlayItem item) {
+		if (item.getMarker(0) != null) {
+			item.setMarker(boundCenterBottom(item.getMarker(0)));
+		}
 		mOverlayItems.add(item);
 		populate();
 	}
