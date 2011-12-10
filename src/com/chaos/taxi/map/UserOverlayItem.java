@@ -20,7 +20,7 @@ public class UserOverlayItem extends MyOverlayItem {
 	}
 
 	public UserOverlayItem(Context context, UserOverlayItemParam param) {
-		super(param.mPoint, "Me", "I am here!");
+		super(param.mPoint, "Me", "I am here!", MyOverlayItem.USER_OVERLAY_ITEM);
 		mContext = context;
 		mParam = param;
 	}

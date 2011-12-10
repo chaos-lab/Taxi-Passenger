@@ -6,12 +6,13 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
 
+import com.chaos.taxi.R;
 import com.google.android.maps.ItemizedOverlay;
 import com.google.android.maps.OverlayItem;
 
 public class TaxiItemizedOverlay extends ItemizedOverlay<OverlayItem> {
 	private static final String TAG = "TaxiItemizedOverlay";
-	// private Context mContext = null;
+	private Context mContext = null;
 	private ArrayList<MyOverlayItem> mOverlayItems = new ArrayList<MyOverlayItem>();
 
 	public TaxiItemizedOverlay(Drawable defaultMarker) {
@@ -20,7 +21,7 @@ public class TaxiItemizedOverlay extends ItemizedOverlay<OverlayItem> {
 
 	public TaxiItemizedOverlay(Drawable defaultMarker, Context context) {
 		this(defaultMarker);
-		// mContext = context;
+		mContext = context;
 	}
 
 	@Override
@@ -34,8 +35,19 @@ public class TaxiItemizedOverlay extends ItemizedOverlay<OverlayItem> {
 	}
 
 	public void addOverlayItem(MyOverlayItem item) {
-		if (item.getMarker(0) != null) {
-			item.setMarker(boundCenterBottom(item.getMarker(0)));
+		switch (item.mType) {
+		case MyOverlayItem.USER_OVERLAY_ITEM:
+			item.setMarker(boundCenterBottom(mContext.getResources()
+					.getDrawable(R.drawable.my_location)));
+			break;
+		case MyOverlayItem.DRIVER_OVERLAY_ITEM:
+			item.setMarker(boundCenterBottom(mContext.getResources()
+					.getDrawable(R.drawable.my_car)));
+			break;
+		case MyOverlayItem.AROUND_OVERLAY_ITEM:
+			item.setMarker(boundCenterBottom(mContext.getResources()
+					.getDrawable(R.drawable.car)));
+			break;
 		}
 		mOverlayItems.add(item);
 		populate();

@@ -87,8 +87,6 @@ public class TaxiMapView extends MapView {
 				+ param.mPoint.getLongitudeE6());
 		getController().animateTo(param.mPoint);
 		mTaxiOverlayItem = new TaxiOverlayItem(mContext, param, true);
-		mTaxiOverlayItem.setMarker(mContext.getResources().getDrawable(
-				R.drawable.my_car));
 		mTaxiItemizedOverlay.addOverlayItem(mTaxiOverlayItem);
 		invalidate();
 	}
@@ -144,8 +142,6 @@ public class TaxiMapView extends MapView {
 			return;
 		}
 		mAroundTaxiOverlayItem.add(item);
-		mUserOverlayItem.setMarker(mContext.getResources().getDrawable(
-				R.drawable.car));
 		mTaxiItemizedOverlay.addOverlayItem(item);
 		invalidate();
 	}
@@ -166,8 +162,6 @@ public class TaxiMapView extends MapView {
 				continue;
 			}
 			mAroundTaxiOverlayItem.add(item);
-			// mUserOverlayItem.setMarker(mContext.getResources().getDrawable(
-			// R.drawable.car));
 			mTaxiItemizedOverlay.addOverlayItem(item);
 		}
 		invalidate();
@@ -181,18 +175,6 @@ public class TaxiMapView extends MapView {
 		mAroundTaxiOverlayItem.clear();
 		invalidate();
 	}
-
-	/*
-	 * public void enableMyLocationOverlay(Context context) { mMyLocationOverlay
-	 * = new MyLocationOverlay(context, TaxiMapView.this);
-	 * this.getOverlays().add(mMyLocationOverlay);
-	 * mMyLocationOverlay.enableMyLocation(); Toast.makeText(context,
-	 * "Waiting for location", 3000); }
-	 * 
-	 * public void disableMyLocationOverlay(Context context) { if
-	 * (mMyLocationOverlay != null) { mMyLocationOverlay.disableMyLocation(); }
-	 * }
-	 */
 
 	private void handleLongPress(GeoPoint lastPixPoint) {
 		// Log.d(TAG, "handle long press here!");

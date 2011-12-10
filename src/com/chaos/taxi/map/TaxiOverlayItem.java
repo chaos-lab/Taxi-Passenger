@@ -67,16 +67,12 @@ public class TaxiOverlayItem extends MyOverlayItem {
 			boolean isMyCar) {
 		super(param.mPoint, "Taxi", "CarNumber is " + param.mCarNumber
 				+ "\nPhoneNumber is " + param.mPhoneNumber + "\nDriverName is "
-				+ param.mNickName);
+				+ param.mNickName, (isMyCar ? MyOverlayItem.DRIVER_OVERLAY_ITEM
+				: MyOverlayItem.AROUND_OVERLAY_ITEM));
 		Log.d(TAG, "CarNumber is " + param.mCarNumber + "PhoneNumber is "
 				+ param.mPhoneNumber + "NickName is " + param.mNickName);
 		mContext = context;
 		mParam = param;
-		if (isMyCar) {
-			// this.setMarker(mContext.getResources().getDrawable(R.drawable.my_car));
-		} else {
-			// this.setMarker(mContext.getResources().getDrawable(R.drawable.car));
-		}
 	}
 
 	@Override
