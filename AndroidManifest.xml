@@ -17,27 +17,27 @@
 
         <activity
             android:label="@string/app_name"
-            android:name="TaxiActivity" >
+            android:name=".activity.TaxiActivity" >
         </activity>
-        <activity android:name="LoginActivity" >
+        <activity android:name=".activity.LoginActivity" >
             <intent-filter >
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="RegisterActivity" >
+        <activity android:name=".activity.RegisterActivity" >
         </activity>
         <activity
-            android:name="WaitTaxiActivity"
+            android:name=".activity.WaitTaxiActivity"
             android:theme="@android:style/Theme.Dialog" >
         </activity>
         <activity
-            android:name="CallTaxiCompleteActivity"
+            android:name=".activity.CallTaxiCompleteActivity"
             android:theme="@android:style/Theme.Dialog" >
         </activity>
         <activity
-            android:name="LoginNoticeActivity"
+            android:name=".activity.LoginNoticeActivity"
             android:theme="@android:style/Theme.Dialog" >
         </activity>
     </application>
