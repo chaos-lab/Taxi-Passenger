@@ -1,18 +1,14 @@
 package com.chaos.taxi.map;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.DialogInterface.OnClickListener;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 
-import com.chaos.taxi.RequestProcessor;
-import com.chaos.taxi.TaxiActivity;
-import com.chaos.taxi.WaitTaxiActivity;
+import com.chaos.taxi.util.RequestProcessor;
 import com.google.android.maps.GeoPoint;
 
 public class TaxiOverlayItem extends MyOverlayItem {

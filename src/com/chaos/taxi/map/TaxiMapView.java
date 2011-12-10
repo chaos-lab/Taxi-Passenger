@@ -252,8 +252,8 @@ public class TaxiMapView extends MapView {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		GeoPoint point = getProjection().fromPixels((int) event.getX(),
-				(int) event.getY());
+		// GeoPoint point = getProjection().fromPixels((int) event.getX(),
+		// (int) event.getY());
 		// Log.d(TAG, point.getLatitudeE6() + " " + point.getLongitudeE6());
 		handleMapPress(event);
 		if (mTaxiItemizedOverlay.size() > 0) {
