@@ -29,6 +29,8 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 	static final String PASSENGER_EVALUATION = "passenger_eval";
 	static final String DRIVER_COMMENT = "driver_comment";
 	static final String PASSENGER_COMMENT = "passenger_comment";
+	static final String START_TIMESTAMP = "start_timestamp";
+	static final String END_TIMESTAMP = "end_timestamp";
 
 	static class HistoryItem {
 		int mId;
@@ -41,6 +43,8 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 		int mPassengerEvaluation;
 		String mDriverComment;
 		String mPassengerComment;
+		int mStartTimeStamp;
+		int mEndTimeStamp;
 
 		static Geocoder mGeocoder = null;
 
@@ -48,7 +52,8 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 				String nickName, String phoneNumber, int locationLatitude,
 				GeoPoint locationPoint, GeoPoint destinationPoint,
 				int driverEvaluation, int passengerEvaluation,
-				String driverComment, String passengerComment) {
+				String driverComment, String passengerComment,
+				int startTimeStamp, int endTimeStamp) {
 			if (mGeocoder != null) {
 				mGeocoder = new Geocoder(context);
 			}
@@ -62,12 +67,15 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 			mPassengerEvaluation = passengerEvaluation;
 			mDriverComment = driverComment;
 			mPassengerComment = passengerComment;
+			mStartTimeStamp = startTimeStamp;
+			mEndTimeStamp = endTimeStamp;
 		}
 
 		public HistoryItem(int id, String carNumber, String nickName,
 				String phoneNumber, String location, String destination,
 				int driverEvaluation, int passengerEvaluation,
-				String driverComment, String passengerComment) {
+				String driverComment, String passengerComment,
+				int startTimeStamp, int endTimeStamp) {
 			mId = id;
 			mCarNumber = carNumber;
 			mNickName = nickName;
@@ -78,6 +86,23 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 			mPassengerEvaluation = passengerEvaluation;
 			mDriverComment = driverComment;
 			mPassengerComment = passengerComment;
+			mStartTimeStamp = startTimeStamp;
+			mEndTimeStamp = endTimeStamp;
+		}
+
+		public HistoryItem(Cursor cursor) {
+			this(cursor.getInt(cursor.getColumnIndex(ID)), cursor
+					.getString(cursor.getColumnIndex(CAR_NUMBER)), cursor
+					.getString(cursor.getColumnIndex(NICKNAME)), cursor
+					.getString(cursor.getColumnIndex(PHONE_NUMBER)), cursor
+					.getString(cursor.getColumnIndex(LOCATION)), cursor
+					.getString(cursor.getColumnIndex(DESTINATION)), cursor
+					.getInt(cursor.getColumnIndex(DRIVER_EVALUATION)), cursor
+					.getInt(cursor.getColumnIndex(PASSENGER_EVALUATION)),
+					cursor.getString(cursor.getColumnIndex(DRIVER_COMMENT)),
+					cursor.getString(cursor.getColumnIndex(PASSENGER_COMMENT)),
+					cursor.getInt(cursor.getColumnIndex(START_TIMESTAMP)),
+					cursor.getInt(cursor.getColumnIndex(END_TIMESTAMP)));
 		}
 
 		private String queryLocationName(GeoPoint point) {
@@ -121,6 +146,8 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 			cv.put(PASSENGER_EVALUATION, mPassengerEvaluation);
 			cv.put(DRIVER_COMMENT, mDriverComment);
 			cv.put(PASSENGER_COMMENT, mPassengerComment);
+			cv.put(START_TIMESTAMP, mStartTimeStamp);
+			cv.put(END_TIMESTAMP, mEndTimeStamp);
 			return cv;
 		}
 
@@ -132,8 +159,10 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 					+ DRIVER_EVALUATION + "=" + mDriverEvaluation + " "
 					+ PASSENGER_EVALUATION + "=" + mPassengerEvaluation + " "
 					+ DRIVER_COMMENT + "=" + mDriverComment + " "
-					+ PASSENGER_COMMENT + "=" + mPassengerComment + " WHERE "
-					+ ID + "=" + mId;
+					+ PASSENGER_COMMENT + "=" + mPassengerComment + " "
+					+ START_TIMESTAMP + "=" + mStartTimeStamp + " "
+					+ END_TIMESTAMP + "=" + mEndTimeStamp + " WHERE " + ID
+					+ "=" + mId;
 			Log.d(TAG, "update command is " + str);
 			return str;
 		}
@@ -145,17 +174,7 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 			}
 
 			cursor.moveToFirst();
-			HistoryItem item = new HistoryItem(cursor.getInt(cursor
-					.getColumnIndex(ID)), cursor.getString(cursor
-					.getColumnIndex(CAR_NUMBER)), cursor.getString(cursor
-					.getColumnIndex(NICKNAME)), cursor.getString(cursor
-					.getColumnIndex(PHONE_NUMBER)), cursor.getString(cursor
-					.getColumnIndex(LOCATION)), cursor.getString(cursor
-					.getColumnIndex(DESTINATION)), cursor.getInt(cursor
-					.getColumnIndex(DRIVER_EVALUATION)), cursor.getInt(cursor
-					.getColumnIndex(PASSENGER_EVALUATION)),
-					cursor.getString(cursor.getColumnIndex(DRIVER_COMMENT)),
-					cursor.getString(cursor.getColumnIndex(PASSENGER_COMMENT)));
+			HistoryItem item = new HistoryItem(cursor);
 			return item;
 		}
 
@@ -172,19 +191,7 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 
 			cursor.moveToFirst();
 			for (int i = 0; i < count; ++i) {
-				items[i] = new HistoryItem(
-						cursor.getInt(cursor.getColumnIndex(ID)),
-						cursor.getString(cursor.getColumnIndex(CAR_NUMBER)),
-						cursor.getString(cursor.getColumnIndex(NICKNAME)),
-						cursor.getString(cursor.getColumnIndex(PHONE_NUMBER)),
-						cursor.getString(cursor.getColumnIndex(LOCATION)),
-						cursor.getString(cursor.getColumnIndex(DESTINATION)),
-						cursor.getInt(cursor.getColumnIndex(DRIVER_EVALUATION)),
-						cursor.getInt(cursor
-								.getColumnIndex(PASSENGER_EVALUATION)),
-						cursor.getString(cursor.getColumnIndex(DRIVER_COMMENT)),
-						cursor.getString(cursor
-								.getColumnIndex(PASSENGER_COMMENT)));
+				items[i] = new HistoryItem(cursor);
 				cursor.moveToNext();
 			}
 			return items;
@@ -204,8 +211,9 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 				+ PHONE_NUMBER + " varchar not null, " + LOCATION
 				+ " text not null, " + DESTINATION + " text, "
 				+ DRIVER_EVALUATION + " integer, " + PASSENGER_EVALUATION
-				+ " integer, " + DRIVER_COMMENT + " text, " + PASSENGER_COMMENT
-				+ " text)");
+				+ " integer, " + DRIVER_COMMENT + " text, " + START_TIMESTAMP
+				+ " integer, " + END_TIMESTAMP + " integer, "
+				+ PASSENGER_COMMENT + " text)");
 	}
 
 	@Override
