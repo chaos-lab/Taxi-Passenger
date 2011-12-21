@@ -158,13 +158,33 @@ public class TaxiUtil {
 			return RequestProcessor.HTTPSERVER + "/passenger/signup";
 		} else if (requestType.equals(RequestManager.SIGNOUT_REQUEST)) {
 			return RequestProcessor.HTTPSERVER + "/passenger/signout";
+		} else if (requestType
+				.equals(RequestManager.GET_CALLTAXI_HISTORY_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/service/history";
+		} else if (requestType
+				.equals(RequestManager.GET_CALLTAXI_EVALUATION_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/service/evaluations";
+		} else if (requestType
+				.equals(RequestManager.GET_USER_EVALUATION_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/service/user/evaluations";
+		} else if (requestType
+				.equals(RequestManager.PUSH_HISTORY_EVALUATION_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/service/evaluate";
+		} else if (requestType.equals(RequestManager.PUSH_GPSCODER_REQUEST)) {
+			return RequestProcessor.HTTPSERVER + "/location/create";
 		}
 		return null;
 	}
 
 	public static boolean isGetRequest(String requestType) {
 		if (requestType.equals(RequestManager.REFRESH_REQUEST)
-				|| requestType.equals(RequestManager.FIND_TAXI_REQUEST)) {
+				|| requestType.equals(RequestManager.FIND_TAXI_REQUEST)
+				|| requestType
+						.equals(RequestManager.GET_CALLTAXI_HISTORY_REQUEST)
+				|| requestType
+						.equals(RequestManager.GET_CALLTAXI_EVALUATION_REQUEST)
+				|| requestType
+						.equals(RequestManager.GET_USER_EVALUATION_REQUEST)) {
 			return true;
 		}
 		return false;
@@ -201,11 +221,9 @@ public class TaxiUtil {
 						"request json str is "
 								+ request.mRequestJson.toString());
 				serverAddress += "?json_data="
-						+ URLEncoder.encode(request.mRequestJson.toString()); 
+						+ URLEncoder.encode(request.mRequestJson.toString());
 				Log.d(TAG, "serverAddress now is " + serverAddress);
-			} /*
-			 * else { serverAddress += "?json_data={}"; }
-			 */
+			}
 			httpUriRequest = new HttpGet(serverAddress);
 		}
 		return httpUriRequest;

@@ -3,10 +3,12 @@ package com.chaos.taxi.util;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.conn.params.ConnManagerParams;
@@ -24,6 +26,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.chaos.taxi.util.RequestManager.Request;
+import com.chaos.taxi.util.TaxiHistorySqlHelper.HistoryItem;
 import com.chaos.taxi.activity.CallTaxiCompleteActivity;
 import com.chaos.taxi.activity.LoginNoticeActivity;
 import com.chaos.taxi.activity.TaxiActivity;
@@ -220,8 +223,8 @@ public class RequestProcessor {
 		synchronized (mMapViewLock) {
 			mMapView.removeAroundOverlay();
 		}
-		Pair<Integer, JSONObject> httpRet = sendRequestToServer(RequestManager
-				.generateFindTaxiRequest(userPoint));
+		Pair<Integer, JSONObject> httpRet = sendRequestToServer(
+				RequestManager.generateFindTaxiRequest(userPoint), false);
 		if (httpRet == null) {
 			return;
 		}
@@ -277,7 +280,8 @@ public class RequestProcessor {
 			new Thread(new Runnable() {
 				public void run() {
 					while (true) {
-						Pair<Integer, JSONObject> ret = sendRequestToServer(req);
+						Pair<Integer, JSONObject> ret = sendRequestToServer(
+								req, false);
 						if (ret != null) {
 							return;
 						} else {
@@ -378,7 +382,7 @@ public class RequestProcessor {
 	public static void signout() {
 		HttpPost httpPost = new HttpPost(
 				TaxiUtil.getServerAddressByRequestType(RequestManager.SIGNOUT_REQUEST));
-		executeHttpRequest(httpPost, "Signout", null);
+		executeHttpRequest(httpPost, "Signout", null, false);
 	}
 
 	public static String login(String phoneNumber, String password) {
@@ -395,7 +399,7 @@ public class RequestProcessor {
 		TaxiUtil.setHttpEntity(httpPost, signinJson.toString());
 
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
-				"Login", null);
+				"Login", null, false);
 		if (executeRet != null) {
 			mLoginResponse = executeRet.second;
 			return LOGIN_SUCCESS;
@@ -444,7 +448,7 @@ public class RequestProcessor {
 		TaxiUtil.setHttpEntity(httpPost, registerJson.toString());
 
 		Pair<Integer, JSONObject> executeRet = executeHttpRequest(httpPost,
-				"Register", null);
+				"Register", null, false);
 		if (executeRet != null) {
 			return REGISTER_SUCCESS;
 		} else {
@@ -453,7 +457,8 @@ public class RequestProcessor {
 	}
 
 	private static Pair<Integer, JSONObject> executeHttpRequest(
-			HttpUriRequest httpUriRequest, String requestType, Request request) {
+			HttpUriRequest httpUriRequest, String requestType, Request request,
+			boolean silence) {
 		Integer statusCode = 0;
 		String responseStr = null;
 		String exceptionMsg = null;
@@ -479,7 +484,9 @@ public class RequestProcessor {
 				if (responseStr == null) {
 					Log.wtf(TAG,
 							"Server result ERROR. should have response str! ");
-					showToastText("Server result ERROR. should have response str! ");
+					if (!silence) {
+						showToastText("Server result ERROR. should have response str! ");
+					}
 					if (requestType == RequestManager.CALL_TAXI_REQUEST) {
 						synchronized (mCallTaxiLock) {
 							mCallTaxiFailMessage = "Server result ERROR. should have response str! ";
@@ -512,20 +519,6 @@ public class RequestProcessor {
 					return new Pair<Integer, JSONObject>(statusCode,
 							new JSONObject(responseStr));
 				}
-			} else {
-				Log.w(TAG, "HttpFail. StatusCode is " + statusCode);
-				if (requestType != RequestManager.REFRESH_REQUEST) {
-					showToastText("HTTP Fail! StatusCode: " + statusCode);
-				}
-				if (requestType == RequestManager.CALL_TAXI_REQUEST) {
-					synchronized (mCallTaxiLock) {
-						mCallTaxiFailMessage = "HTTP Fail! StatusCode: "
-								+ statusCode;
-						mCallTaxiRequestStatusMap.put(mCallTaxiRequestKey,
-								CALL_TAXI_STATUS_SERVER_ERROR);
-					}
-				}
-				return null;
 			}
 		} catch (ClientProtocolException e) {
 			exceptionMsg = "ClientProtocolException: " + e.getMessage();
@@ -538,13 +531,16 @@ public class RequestProcessor {
 			e.printStackTrace();
 		}
 
-		showToastText("Cannot connect to server: " + exceptionMsg);
+		if (!silence) {
+			showToastText("Cannot connect to server: " + exceptionMsg);
+		}
 		return null;
 	}
 
 	private static void handleServerStatusCode(String requestType, int status) {
 		if (requestType.equals(RequestManager.CALL_TAXI_REQUEST)) {
 			switch (status) {
+			case 1:
 			case 2:
 			case 3:
 			default:
@@ -563,7 +559,8 @@ public class RequestProcessor {
 		mContext.startActivity(new Intent(mContext, LoginNoticeActivity.class));
 	}
 
-	private static Pair<Integer, JSONObject> sendRequestToServer(Request request) {
+	public static Pair<Integer, JSONObject> sendRequestToServer(
+			Request request, boolean silence) {
 		if (request == null) {
 			Log.e(TAG, "sendRequestToServer: request is null!");
 			return null;
@@ -576,7 +573,8 @@ public class RequestProcessor {
 			return null;
 		}
 
-		return executeHttpRequest(httpUriRequest, request.mRequestType, request);
+		return executeHttpRequest(httpUriRequest, request.mRequestType,
+				request, silence);
 	}
 
 	private static void showToastText(String text) {
@@ -610,7 +608,7 @@ public class RequestProcessor {
 					continue;
 				}
 
-				if (sendRequestToServer(request) == null) {
+				if (sendRequestToServer(request, false) == null) {
 					if (request.mRequestType
 							.equals(RequestManager.CALL_TAXI_REQUEST)) {
 						long requestKey = request.mRequestJson.optInt("key");
@@ -627,7 +625,7 @@ public class RequestProcessor {
 	private static void sendRefreshRequestToServer() {
 		Request request = new Request(RequestManager.REFRESH_REQUEST, null);
 
-		Pair<Integer, JSONObject> httpRet = sendRequestToServer(request);
+		Pair<Integer, JSONObject> httpRet = sendRequestToServer(request, false);
 		if (httpRet == null) {
 			return;
 		}
@@ -772,6 +770,217 @@ public class RequestProcessor {
 	public static boolean hasTaxi() {
 		synchronized (mCallTaxiLock) {
 			return sHasTaxi;
+		}
+	}
+
+	public static String sendQueryGpscoderRequest(double latitude,
+			double longitude) {
+		Log.d(TAG, "sendQueryGpscoderRequest: " + latitude + ", " + longitude);
+		HttpGet get = new HttpGet(
+				"http://maps.google.com/maps/api/geocode/json?latlng="
+						+ latitude + "," + longitude
+						+ "&sensor=false&language=zh-CN");
+		HttpResponse httpResponse;
+		try {
+			httpResponse = mHttpClient.execute(get);
+			if (httpResponse.getStatusLine().getStatusCode() == 200) {
+				if (httpResponse.getEntity() != null) {
+					BufferedReader bufferedReader = new BufferedReader(
+							new InputStreamReader(httpResponse.getEntity()
+									.getContent()));
+					StringBuffer stringBuffer = new StringBuffer();
+					for (String line = bufferedReader.readLine(); line != null; line = bufferedReader
+							.readLine()) {
+						stringBuffer.append(line);
+					}
+					String responseStr = stringBuffer.toString();
+					Log.d(TAG, "sendQueryGpscoderRequest: response is "
+							+ responseStr);
+
+					if (responseStr != null) {
+						JSONObject gpscoderJson = new JSONObject(responseStr);
+						String addrStr = handleGpscoderResponseJson(gpscoderJson);
+
+						// push this location to server
+						RequestManager.addPushGpscoderRequest(addrStr,
+								latitude, longitude);
+						return addrStr;
+					}
+				}
+			}
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	private static String handleGpscoderResponseJson(JSONObject gpscoderJson) {
+		String addrStr = null;
+		String status = gpscoderJson.optString("status", "FAIL");
+		if (status != null && status.equals("OK")) {
+			JSONArray resultsArray = gpscoderJson.optJSONArray("results");
+			if (resultsArray != null) {
+				for (int i = 0; i < resultsArray.length(); ++i) {
+					JSONObject resultJson = resultsArray.optJSONObject(i);
+					if (resultJson != null) {
+						addrStr = resultJson.optString("formatted_address");
+						String type = resultJson.optString("types");
+						if (type != null && type.equals("street_address")) {
+							return addrStr;
+						}
+					}
+				}
+			}
+		}
+		return addrStr;
+	}
+
+	public static ArrayList<HistoryItem> sendQueryHistoryRequest(
+			long startTimeStamp, long endTimeStamp, int countNeedToQuery) {
+		Pair<Integer, JSONObject> httpRet = sendRequestToServer(
+				RequestManager.generateQueryHistoryRequest(startTimeStamp,
+						endTimeStamp, countNeedToQuery), true);
+		if (httpRet == null) {
+			return null;
+		}
+		if (httpRet.second == null) {
+			Log.wtf(TAG, "sendQueryHistoryRequest response str is null!");
+			return null;
+		}
+
+		JSONArray histories = httpRet.second.optJSONArray("services");
+		if (histories == null || histories.length() == 0) {
+			Log.d(TAG, "no history!");
+			return null;
+		}
+		Log.d(TAG, "has history! " + histories.length());
+		ArrayList<HistoryItem> items = new ArrayList<HistoryItem>();
+		for (int i = 0; i < histories.length(); ++i) {
+			JSONObject history = histories.optJSONObject(i);
+			if (history == null) {
+				Log.wtf(TAG,
+						"history should not be null in history query historyJsonArray! "
+								+ i);
+				continue;
+			}
+
+			long id = history.optLong("id");
+
+			JSONObject driverJson = history.optJSONObject("driver");
+			if (driverJson == null) {
+				Log.wtf(TAG,
+						"driverJson should not be null in history query response!");
+				continue;
+			}
+			String carNumber = driverJson.optString("car_number");
+			String nickName = driverJson.optString("nickname");
+			String phoneNumber = driverJson.optString("phone_number");
+
+			JSONObject originJson = history.optJSONObject("origin");
+			if (originJson == null) {
+				Log.wtf(TAG,
+						"originJson should not be null in history query response!");
+				continue;
+			}
+			String originName = originJson.optString("name");
+			Double originLatitude = null;
+			Double originLongitude = null;
+			if (originName == null) {
+				originLatitude = originJson.optDouble("latitude");
+				originLongitude = originJson.optDouble("longitude");
+			}
+
+			JSONObject destinationJson = history.optJSONObject("destination");
+			String destinationName = null;
+			Double destinationLatitude = null;
+			Double destinationLongitude = null;
+			if (destinationJson != null) {
+				destinationName = destinationJson.optString("name");
+				if (destinationName == null) {
+					destinationLatitude = destinationJson.optDouble("latitude");
+					destinationLongitude = destinationJson
+							.optDouble("longitude");
+				}
+			}
+
+			JSONObject driverEvaluationJson = history
+					.optJSONObject("driver_evaluation");
+			Double driverEvaluation = null;
+			String driverComment = null;
+			Long driverCommentTimeStamp = null;
+			if (driverEvaluationJson != null) {
+				driverEvaluation = driverEvaluationJson.optDouble("score");
+				driverComment = driverEvaluationJson.optString("comment");
+				driverCommentTimeStamp = driverEvaluationJson
+						.optLong("created_at");
+			}
+
+			JSONObject passengerEvaluationJson = history
+					.optJSONObject("passenger_evaluation");
+			Double passengerEvaluation = null;
+			String passengerComment = null;
+			Long passengerCommentTimeStamp = null;
+			if (passengerEvaluationJson != null) {
+				passengerEvaluation = passengerEvaluationJson
+						.optDouble("score");
+				passengerComment = passengerEvaluationJson.optString("comment");
+				passengerCommentTimeStamp = passengerEvaluationJson
+						.optLong("created_at");
+			}
+
+			Long historyStartTimeStamp = history.optLong("created_at");
+			Long historyEndTimeStamp = history.optLong("updated_at");
+
+			Integer historyState = history.optInt("state");
+
+			HistoryItem item = new HistoryItem(id, carNumber, nickName,
+					phoneNumber, originName, originLatitude, originLongitude,
+					destinationName, destinationLatitude, destinationLongitude,
+					driverEvaluation, passengerEvaluation, driverComment,
+					passengerComment, driverCommentTimeStamp,
+					passengerCommentTimeStamp, startTimeStamp, endTimeStamp, 0,
+					historyState);
+
+			items.add(item);
+		}
+		HistoryItem.sortSequentialItemsDesc(items);
+		return items;
+	}
+
+	public static boolean sendSubmitCommentRequest(long id, String comment,
+			double rating) {
+		Pair<Integer, JSONObject> httpRet = sendRequestToServer(
+				RequestManager
+						.generateSubmitCommentRequest(id, comment, rating),
+				false);
+		if (httpRet == null) {
+			return false;
+		}
+		if (httpRet.second == null) {
+			Log.wtf(TAG, "SubmitComment response str is null!");
+			showToastText("SubmitCommentFail! Server Response Error!");
+			return false;
+		}
+		int status = httpRet.second.optInt("status");
+		switch (status) {
+		case 0:
+			return true;
+		case 101:
+			showToastText("SubmitCommentFail! This CallTaxi is still not completed!");
+			return false;
+		case 102:
+			showToastText("SubmitCommentFail! You do not have permission to comment this history!");
+			return false;
+		case 103:
+			showToastText("SubmitCommentFail! This history is already commented!");
+			return false;
+		default:
+			showToastText("SubmitCommentFail!");
+			return false;
 		}
 	}
 }

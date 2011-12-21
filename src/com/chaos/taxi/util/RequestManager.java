@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 import android.util.Log;
 
+import com.chaos.taxi.util.RequestManager.Request;
 import com.google.android.maps.GeoPoint;
 
 public class RequestManager {
@@ -23,6 +24,12 @@ public class RequestManager {
 	final static String SIGNIN_REQUEST = "signin-request";
 	final static String REGISTER_REQUEST = "register-request";
 	final static String SIGNOUT_REQUEST = "signout-request";
+
+	static final String GET_CALLTAXI_HISTORY_REQUEST = "get-calltaxi-history";
+	static final String GET_CALLTAXI_EVALUATION_REQUEST = "get-calltaxi-evaluation";
+	static final String GET_USER_EVALUATION_REQUEST = "get-user-evaluation";
+	static final String PUSH_HISTORY_EVALUATION_REQUEST = "push-history-evaluation";
+	final static String PUSH_GPSCODER_REQUEST = "push-gps-coder-request";
 
 	static ArrayList<Request> mRequests = new ArrayList<Request>();
 
@@ -85,7 +92,7 @@ public class RequestManager {
 				+ callTaxiRequestKey + " taxiPhoneNumber: " + taxiPhoneNumber);
 		JSONObject jsonObj = new JSONObject();
 		try {
-			//jsonObj.put("type", CALL_TAXI_REQUEST);
+			// jsonObj.put("type", CALL_TAXI_REQUEST);
 			jsonObj.put("key", callTaxiRequestKey);
 			if (taxiPhoneNumber != null) {
 				jsonObj.put("driver", taxiPhoneNumber);
@@ -99,7 +106,7 @@ public class RequestManager {
 			} else {
 				Log.w(TAG, "CallTaxi: userPoint is still null!");
 			}
-			jsonObj.put("location", locationJson);
+			jsonObj.put("origin", locationJson);
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return;
@@ -113,7 +120,7 @@ public class RequestManager {
 	public static Request generateCancelCallTaxiRequest(long callTaxiRequestKey) {
 		JSONObject jsonObj = new JSONObject();
 		try {
-			//jsonObj.put("type", CANCEL_CALL_TAXI_REQUEST);
+			// jsonObj.put("type", CANCEL_CALL_TAXI_REQUEST);
 			jsonObj.put("key", callTaxiRequestKey);
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -172,5 +179,65 @@ public class RequestManager {
 				return null;
 			}
 		}
+	}
+
+	public static void addPushGpscoderRequest(String addrStr, double latitude,
+			double longitude) {
+		JSONObject jsonObj = new JSONObject();
+		try {
+			jsonObj.put("latitude", latitude);
+			jsonObj.put("longitude", longitude);
+			jsonObj.put("name", addrStr);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return;
+		}
+		Request request = new Request(PUSH_GPSCODER_REQUEST, jsonObj);
+		addRequest(request);
+	}
+
+	public static Request generateQueryHistoryRequest(long startTimeStamp,
+			long endTimeStamp, int countNeedToQuery) {
+		JSONObject jsonObj = new JSONObject();
+		try {
+			jsonObj.put("start_time", startTimeStamp);
+			jsonObj.put("end_time", endTimeStamp);
+			jsonObj.put("count", countNeedToQuery);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return null;
+		}
+		Request request = new Request(GET_CALLTAXI_HISTORY_REQUEST, jsonObj);
+		return request;
+	}
+
+	public static Request generateSubmitCommentRequest(long id, String comment,
+			double rating) {
+		JSONObject jsonObj = new JSONObject();
+		try {
+			jsonObj.put("id", id);
+			jsonObj.put("score", rating);
+			jsonObj.put("comment", comment);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return null;
+		}
+		Request request = new Request(PUSH_HISTORY_EVALUATION_REQUEST, jsonObj);
+		return request;
+	}
+
+	public static Request generateUserEvaluationRequest(String phoneNumber,
+			long endTime, int count) {
+		JSONObject jsonObj = new JSONObject();
+		try {
+			jsonObj.put("phone_number", phoneNumber);
+			jsonObj.put("end_time", endTime);
+			jsonObj.put("count", count);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return null;
+		}
+		Request request = new Request(GET_USER_EVALUATION_REQUEST, jsonObj);
+		return request;
 	}
 }

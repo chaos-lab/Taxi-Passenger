@@ -280,7 +280,8 @@ public class TaxiActivity extends MapActivity {
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		menu.add(0, HISTORY, 0, "History").setIcon(R.drawable.history);
+		menu.add(0, HISTORY, 0, "History").setIcon(R.drawable.history)
+				.setIntent(new Intent(this, HistoryActivity.class));
 		return super.onCreateOptionsMenu(menu);
 	}
 
@@ -290,6 +291,7 @@ public class TaxiActivity extends MapActivity {
 		switch (item.getItemId()) {
 		case HISTORY:
 			Log.d(TAG, "history selected.");
+			startActivity(new Intent(this, HistoryActivity.class));
 			break;
 		}
 		return true;
