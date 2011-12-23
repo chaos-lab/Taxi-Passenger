@@ -96,8 +96,8 @@ public class RequestProcessor {
 	static final int MAX_TOTAL_CONNECTIONS = 100;
 	static final int MAX_ROUTE_CONNECTIONS = 100;
 	static final int WAIT_TIMEOUT = 10 * 1000; // 10 seconds
-	static final int READ_TIMEOUT = 20 * 1000; // 20 seconds
-	static final int CONNECT_TIMEOUT = 60 * 60 * 1000; // 1 hour
+	static final int READ_TIMEOUT = 60 * 1000; // 60 seconds
+	static final int CONNECT_TIMEOUT = 10 * 1000; // 10 seconds
 	static DefaultHttpClient mHttpClient = null;
 
 	static {
@@ -145,6 +145,10 @@ public class RequestProcessor {
 			TaxiMapView mapView) {
 		mContext = context;
 		mMapView = mapView;
+	}
+	
+	public static void initRequestProcessor(Activity context) {
+		mContext = context;
 	}
 
 	public static void setUserGeoPoint(GeoPoint point) {
@@ -775,11 +779,11 @@ public class RequestProcessor {
 
 	public static String sendQueryGpscoderRequest(double latitude,
 			double longitude) {
-		Log.d(TAG, "sendQueryGpscoderRequest: " + latitude + ", " + longitude);
-		HttpGet get = new HttpGet(
-				"http://maps.google.com/maps/api/geocode/json?latlng="
-						+ latitude + "," + longitude
-						+ "&sensor=false&language=zh-CN");
+		String serverAddress = "http://maps.googleapis.com/maps/api/geocode/json?latlng="
+				+ latitude + "," + longitude + "&sensor=false&language=zh-CN";
+		Log.d(TAG, "sendQueryGpscoderRequest: " + latitude + ", " + longitude
+				+ "  serverAddress: " + serverAddress);
+		HttpGet get = new HttpGet(serverAddress);
 		HttpResponse httpResponse;
 		try {
 			httpResponse = mHttpClient.execute(get);
@@ -799,11 +803,8 @@ public class RequestProcessor {
 
 					if (responseStr != null) {
 						JSONObject gpscoderJson = new JSONObject(responseStr);
-						String addrStr = handleGpscoderResponseJson(gpscoderJson);
-
-						// push this location to server
-						RequestManager.addPushGpscoderRequest(addrStr,
-								latitude, longitude);
+						String addrStr = handleGpscoderResponseJson(
+								gpscoderJson, latitude, longitude);
 						return addrStr;
 					}
 				}
@@ -818,7 +819,8 @@ public class RequestProcessor {
 		return null;
 	}
 
-	private static String handleGpscoderResponseJson(JSONObject gpscoderJson) {
+	private static String handleGpscoderResponseJson(JSONObject gpscoderJson,
+			double latitude, double longitude) {
 		String addrStr = null;
 		String status = gpscoderJson.optString("status", "FAIL");
 		if (status != null && status.equals("OK")) {
@@ -830,6 +832,9 @@ public class RequestProcessor {
 						addrStr = resultJson.optString("formatted_address");
 						String type = resultJson.optString("types");
 						if (type != null && type.equals("street_address")) {
+							// push this location to server
+							RequestManager.addPushGpscoderRequest(addrStr,
+									latitude, longitude);
 							return addrStr;
 						}
 					}
@@ -889,9 +894,21 @@ public class RequestProcessor {
 			String originName = originJson.optString("name");
 			Double originLatitude = null;
 			Double originLongitude = null;
-			if (originName == null) {
-				originLatitude = originJson.optDouble("latitude");
-				originLongitude = originJson.optDouble("longitude");
+			if (originName == null || originName.length() == 0
+					|| originName.equals("null")) {
+				originLatitude = originJson.optDouble("latitude", -1000);
+				originLongitude = originJson.optDouble("longitude", -1000);
+				Log.d(TAG, "originGps is " + originLatitude + ", "
+						+ originLongitude);
+				originName = null;
+				if (originLatitude == -1000) {
+					originLatitude = null;
+				}
+				if (originLongitude == -1000) {
+					originLongitude = null;
+				}
+			} else {
+				Log.d(TAG, "originName is " + originName);
 			}
 
 			JSONObject destinationJson = history.optJSONObject("destination");
@@ -900,10 +917,21 @@ public class RequestProcessor {
 			Double destinationLongitude = null;
 			if (destinationJson != null) {
 				destinationName = destinationJson.optString("name");
-				if (destinationName == null) {
-					destinationLatitude = destinationJson.optDouble("latitude");
-					destinationLongitude = destinationJson
-							.optDouble("longitude");
+				if (destinationName == null || destinationName.length() == 0
+						|| destinationName.equals("null")) {
+					destinationName = null;
+					destinationLatitude = destinationJson.optDouble("latitude",
+							-1000);
+					destinationLongitude = destinationJson.optDouble(
+							"longitude", -1000);
+					Log.d(TAG, "destinationGps is " + destinationLatitude
+							+ ", " + destinationLatitude);
+					if (destinationLatitude == -1000) {
+						destinationLatitude = null;
+					}
+					if (destinationLongitude == -1000) {
+						destinationLongitude = null;
+					}
 				}
 			}
 
@@ -942,8 +970,8 @@ public class RequestProcessor {
 					destinationName, destinationLatitude, destinationLongitude,
 					driverEvaluation, passengerEvaluation, driverComment,
 					passengerComment, driverCommentTimeStamp,
-					passengerCommentTimeStamp, startTimeStamp, endTimeStamp, 0,
-					historyState);
+					passengerCommentTimeStamp, historyStartTimeStamp,
+					historyEndTimeStamp, 0, historyState);
 
 			items.add(item);
 		}

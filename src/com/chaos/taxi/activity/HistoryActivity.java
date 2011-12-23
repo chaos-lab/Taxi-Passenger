@@ -92,12 +92,14 @@ public class HistoryActivity extends ListActivity {
 		mTaxiHistorySqlHelper = new TaxiHistorySqlHelper(this);
 		mTaxiHistorySqlHelper.open();
 
+		RequestProcessor.initRequestProcessor(this);
 		initListView();
 	}
 
 	@Override
 	public void onResume() {
 		super.onResume();
+		RequestProcessor.initRequestProcessor(this);
 		if (mTaxiHistorySqlHelper == null) {
 			mTaxiHistorySqlHelper = new TaxiHistorySqlHelper(this);
 		}
@@ -121,7 +123,7 @@ public class HistoryActivity extends ListActivity {
 	@Override
 	public void onRestoreInstanceState(Bundle state) {
 		super.onRestoreInstanceState(state);
-		mTailHistoryId = state.getInt(LIST_TAIL_HISTORY_ID);
+		mTailHistoryId = state.getLong(LIST_TAIL_HISTORY_ID);
 	}
 
 	protected void initListView() {

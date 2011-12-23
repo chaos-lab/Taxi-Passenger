@@ -129,19 +129,22 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 		}
 
 		private String queryGpscoderInNanjing(Double latitude, Double longitude) {
-			if (isGpsLocationInNanjing(latitude, longitude)) {
+			if (isGpsLocationInJiangsu(latitude, longitude)) {
 				return RequestProcessor.sendQueryGpscoderRequest(latitude,
 						longitude);
 			}
 			return null;
 		}
 
-		private boolean isGpsLocationInNanjing(Double latitude, Double longitude) {
+		private boolean isGpsLocationInJiangsu(Double latitude, Double longitude) {
 			if (latitude == null || longitude == null) {
 				return false;
 			}
-			// TODO Auto-generated method stub
-			return true;
+			if (latitude > 30.75784060 && latitude < 35.12451360
+					&& longitude > 116.36196040 && longitude < 121.93211430) {
+				return true;
+			}
+			return false;
 		}
 
 		public ContentValues getInsertContentValues() {
@@ -257,7 +260,7 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 
 	@Override
 	public void onCreate(SQLiteDatabase db) {
-		db.execSQL("create table if not exists " + TABLE_NAME + "("
+		String str = "create table if not exists " + TABLE_NAME + "("
 				+ HistoryItem.ID + " integer primary key DESC, "
 				+ HistoryItem.CAR_NUMBER + " varchar not null, "
 				+ HistoryItem.NICKNAME + " varchar not null, "
@@ -270,13 +273,15 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 				+ HistoryItem.DRIVER_EVALUATION + " REAL, "
 				+ HistoryItem.PASSENGER_EVALUATION + " REAL, "
 				+ HistoryItem.DRIVER_COMMENT + " text, "
-				+ HistoryItem.PASSENGER_COMMENT + " text "
+				+ HistoryItem.PASSENGER_COMMENT + " text, "
 				+ HistoryItem.DRIVER_COMMENT_TIMESTAMP + " integer, "
-				+ HistoryItem.PASSENGER_COMMENT_TIMESTAMP + " integer "
+				+ HistoryItem.PASSENGER_COMMENT_TIMESTAMP + " integer, "
 				+ HistoryItem.START_TIMESTAMP + " integer, "
 				+ HistoryItem.END_TIMESTAMP + " integer, "
-				+ HistoryItem.HISTORY_STATE + " integer " + HistoryItem.NEXT_ID
-				+ " integer not null)");
+				+ HistoryItem.HISTORY_STATE + " integer, "
+				+ HistoryItem.NEXT_ID + " integer not null)";
+		Log.d(TAG, str);
+		db.execSQL(str);
 	}
 
 	@Override
@@ -295,7 +300,7 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 	}
 
 	public long replaceHistory(HistoryItem item) {
-		Log.d(TAG, "insertHistory: " + item.mId);
+		Log.d(TAG, "replaceHistory: " + item.mId);
 		ContentValues cv = item.getInsertContentValues();
 		SQLiteDatabase db = getWritableDatabase();
 		return db.replace(TABLE_NAME, null, cv);
@@ -329,6 +334,9 @@ public class TaxiHistorySqlHelper extends SQLiteOpenHelper {
 		HistoryItem item = HistoryItem.parseItemFromCursor(cursor);
 		if (cursor != null) {
 			cursor.close();
+		}
+		if (item != null) {
+			Log.d(TAG, "max id is " + item.mId);
 		}
 		return item;
 	}

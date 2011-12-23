@@ -55,7 +55,7 @@ public class LoginActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		RequestProcessor.initRequestProcessor(LoginActivity.this, null);
+		RequestProcessor.initRequestProcessor(LoginActivity.this);
 		setContentView(R.layout.login);
 
 		login_btn = (Button) findViewById(R.id.login_btn);
@@ -126,5 +126,11 @@ public class LoginActivity extends Activity {
 			// TaxiActivity.class));
 			// LoginActivity.this.finish();
 		}
+	}
+
+	@Override
+	public void onResume() {
+		super.onResume();
+		RequestProcessor.initRequestProcessor(this);
 	}
 }

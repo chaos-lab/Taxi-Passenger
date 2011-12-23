@@ -296,4 +296,11 @@ public class TaxiActivity extends MapActivity {
 		}
 		return true;
 	}
+	
+
+	@Override
+	public void onResume() {
+		super.onResume();
+		RequestProcessor.initRequestProcessor(this, mMapView);
+	}
 }

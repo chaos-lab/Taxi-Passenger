@@ -125,6 +125,7 @@ public class WaitTaxiActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		RequestProcessor.initRequestProcessor(this);
 		Log.d(TAG, "onCreate");
 
 		Intent intent = getIntent();
@@ -208,5 +209,12 @@ public class WaitTaxiActivity extends Activity {
 	public void onBackPressed() {
 		Log.d(TAG, "onBackPressed is ignored!");
 		return;
+	}
+	
+
+	@Override
+	public void onResume() {
+		super.onResume();
+		RequestProcessor.initRequestProcessor(this);
 	}
 }
