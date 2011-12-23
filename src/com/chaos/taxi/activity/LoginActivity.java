@@ -22,7 +22,7 @@ public class LoginActivity extends Activity {
 	static final int SHOW_PROGRESS_DIALOG = 100;
 	static final int DISMISS_PROGRESS_DIALOG = 200;
 	static final int SHOW_TOAST_TEXT = 300;
-
+ 
 	ProgressDialog mProgressDialog = null;
 
 	Button login_btn = null;
