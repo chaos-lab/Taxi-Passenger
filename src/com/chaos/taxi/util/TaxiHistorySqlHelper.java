@@ -2,13 +2,10 @@ package com.chaos.taxi.util;
 
 import java.util.ArrayList;
 
-import com.chaos.taxi.util.TaxiHistorySqlHelper.HistoryItem;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteDatabase.CursorFactory;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 

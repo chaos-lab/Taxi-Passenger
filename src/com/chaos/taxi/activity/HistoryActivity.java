@@ -40,10 +40,15 @@ public class HistoryActivity extends ListActivity {
 
 	static final int SHOW_HISTORY_COUNT = 10;
 
-	static final int SHOW_PROGRESS_DIALOG = 100;
-	static final int DISMISS_PROGRESS_DIALOG = 200;
-	static final int SHOW_TOAST_TEXT = 300;
-	static final int SET_LIST_ADAPTER = 400;
+	static final int SHOW_PROGRESS_DIALOG = 1;
+	static final int DISMISS_PROGRESS_DIALOG = 2;
+	static final int SHOW_TOAST_TEXT = 3;
+	static final int SET_LIST_ADAPTER = 4;
+	static final int SET_FOOTER_BUTTON_INVISIBLE = 5;
+	static final int SET_FOOTER_BAR_VISIBLE = 6;
+	static final int SET_FOOTER_BUTTON_VISIBLE = 7;
+	static final int SET_FOOTER_BAR_INVISIBLE = 8;
+	static final int NOTIFY_DATASET_CHANGED = 9;
 
 	static final String ITEM_TITLE = "ITEM_TITLE";
 	static final String ITEM_STAR1 = "ITEM_STAR1";
@@ -79,6 +84,21 @@ public class HistoryActivity extends ListActivity {
 				break;
 			case SET_LIST_ADAPTER:
 				HistoryActivity.this.setListAdapter(mSimpleAdapter);
+				break;
+			case SET_FOOTER_BUTTON_INVISIBLE:
+				mFooterButton.setVisibility(View.GONE);
+				break;
+			case SET_FOOTER_BAR_VISIBLE:
+				mFooterProgressBar.setVisibility(View.VISIBLE);
+				break;
+			case SET_FOOTER_BUTTON_VISIBLE:
+				mFooterButton.setVisibility(View.VISIBLE);
+				break;
+			case SET_FOOTER_BAR_INVISIBLE:
+				mFooterProgressBar.setVisibility(View.GONE);
+				break;
+			case NOTIFY_DATASET_CHANGED:
+				mSimpleAdapter.notifyDataSetChanged();
 				break;
 			}
 		}
@@ -186,10 +206,11 @@ public class HistoryActivity extends ListActivity {
 		mFooterButton.setText("More...");
 		mFooterButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
+				Log.d(TAG, "mFooterButton onClick.");
 				new Thread(new Runnable() {
 					public void run() {
-						mFooterButton.setVisibility(View.GONE);
-						mFooterProgressBar.setVisibility(View.VISIBLE);
+						mHandler.sendEmptyMessage(SET_FOOTER_BUTTON_INVISIBLE);
+						mHandler.sendEmptyMessage(SET_FOOTER_BAR_VISIBLE);
 
 						// first check the local database
 						ArrayList<HistoryItem> items = mTaxiHistorySqlHelper
@@ -245,12 +266,12 @@ public class HistoryActivity extends ListActivity {
 								mHistoryItems.add(map);
 								mHistoryItemIds.add(items.get(i).mId);
 							}
-							mSimpleAdapter.notifyDataSetChanged();
+							mHandler.sendEmptyMessage(NOTIFY_DATASET_CHANGED);
 							mTailHistoryId = items.get(items.size() - 1).mId;
 						}
 
-						mFooterButton.setVisibility(View.VISIBLE);
-						mFooterProgressBar.setVisibility(View.GONE);
+						mHandler.sendEmptyMessage(SET_FOOTER_BUTTON_VISIBLE);
+						mHandler.sendEmptyMessage(SET_FOOTER_BAR_INVISIBLE);
 					}
 				}).start();
 			}
@@ -286,11 +307,11 @@ public class HistoryActivity extends ListActivity {
 	}
 
 	protected void addFooterButton() {
-		this.getListView().addFooterView(mFooterButton);
+		this.getListView().addFooterView(mFooterView);
 	}
 
 	protected void removeFooterButton() {
-		this.getListView().removeFooterView(mFooterButton);
+		this.getListView().removeFooterView(mFooterView);
 	}
 
 	@Override

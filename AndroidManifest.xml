@@ -40,8 +40,12 @@
             android:name=".activity.LoginNoticeActivity"
             android:theme="@android:style/Theme.Dialog" >
         </activity>
-        <activity android:name=".activity.HistoryActivity"></activity>
-        <activity android:name=".activity.HistoryDetailActivity"></activity>
+        <activity android:name=".activity.HistoryActivity" >
+        </activity>
+        <activity
+            android:name=".activity.HistoryDetailActivity"
+            android:theme="@android:style/Theme.Dialog" >
+        </activity>
     </application>
 
 </manifest>

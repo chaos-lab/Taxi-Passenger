@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+    android:layout_height="?android:attr/listPreferredItemHeight"
     android:orientation="vertical" >
 
     <Button
         android:id="@+id/moreHistoryButton"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="More" />
+        android:layout_height="?android:attr/listPreferredItemHeight"
+        android:background="@android:drawable/list_selector_background"
+        android:text="More"
+        android:textColor="#FFFFFF" />
 
     <LinearLayout
         android:id="@+id/moreHistoryProgressBar"

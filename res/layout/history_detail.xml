@@ -72,9 +72,10 @@
 
     <EditText
         android:id="@+id/addCommentEditText"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/passengerCommentTextView"
+        android:layout_centerInParent="true"
         android:layout_weight="1"
         android:inputType="textMultiLine" >
 
@@ -82,18 +83,10 @@
     </EditText>
 
     <Button
-        android:id="@+id/addCommentButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/addCommentEditText"
-        android:layout_centerInParent="true"
-        android:text="AddComment" />
-
-    <Button
         android:id="@+id/submitCommentButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/addCommentButton"
+        android:layout_below="@id/addCommentEditText"
         android:layout_centerInParent="true"
         android:text="SubmitComment" />
 

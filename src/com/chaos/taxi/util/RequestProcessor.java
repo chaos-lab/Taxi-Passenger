@@ -146,7 +146,7 @@ public class RequestProcessor {
 		mContext = context;
 		mMapView = mapView;
 	}
-	
+
 	public static void initRequestProcessor(Activity context) {
 		mContext = context;
 	}
@@ -896,19 +896,11 @@ public class RequestProcessor {
 			Double originLongitude = null;
 			if (originName == null || originName.length() == 0
 					|| originName.equals("null")) {
-				originLatitude = originJson.optDouble("latitude", -1000);
-				originLongitude = originJson.optDouble("longitude", -1000);
+				originLatitude = originJson.optDouble("latitude");
+				originLongitude = originJson.optDouble("longitude");
 				Log.d(TAG, "originGps is " + originLatitude + ", "
 						+ originLongitude);
 				originName = null;
-				if (originLatitude == -1000) {
-					originLatitude = null;
-				}
-				if (originLongitude == -1000) {
-					originLongitude = null;
-				}
-			} else {
-				Log.d(TAG, "originName is " + originName);
 			}
 
 			JSONObject destinationJson = history.optJSONObject("destination");
@@ -920,18 +912,11 @@ public class RequestProcessor {
 				if (destinationName == null || destinationName.length() == 0
 						|| destinationName.equals("null")) {
 					destinationName = null;
-					destinationLatitude = destinationJson.optDouble("latitude",
-							-1000);
-					destinationLongitude = destinationJson.optDouble(
-							"longitude", -1000);
+					destinationLatitude = destinationJson.optDouble("latitude");
+					destinationLongitude = destinationJson
+							.optDouble("longitude");
 					Log.d(TAG, "destinationGps is " + destinationLatitude
 							+ ", " + destinationLatitude);
-					if (destinationLatitude == -1000) {
-						destinationLatitude = null;
-					}
-					if (destinationLongitude == -1000) {
-						destinationLongitude = null;
-					}
 				}
 			}
 
